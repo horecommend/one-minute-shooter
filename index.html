@@ -905,7 +905,7 @@
       playerExplosion = 1.1;
       playing = false;
       awaitingNextMinute = false;
-      pendingEndTitle = "飞船退场";
+      pendingEndTitle = "失败";
       endingTimer = 1.15;
       pulse(player.x, player.y, "#ff5c7a", 82);
       pulse(player.x - 22, player.y + 12, "#ffcc66", 54);
@@ -930,7 +930,7 @@
         updateBursts(dt);
         if (endingTimer > 0) {
           endingTimer -= dt;
-          if (endingTimer <= 0) endGame(pendingEndTitle || "飞船退场");
+          if (endingTimer <= 0) endGame(pendingEndTitle || "失败");
         }
         return;
       }

@@ -343,6 +343,9 @@
     let minuteTarget = 2000;
     let awaitingNextMinute = false;
     let playing = false;
+    let playerDestroyed = false;
+    let endingTimer = 0;
+    let pendingEndTitle = "";
     let lastTime = 0;
     let nextEnemyId = 1;
     let enemyTimer = 0;
@@ -436,6 +439,9 @@
       elapsedTime = 0;
       minuteTarget = getMinuteTarget();
       playing = true;
+      playerDestroyed = false;
+      endingTimer = 0;
+      pendingEndTitle = "";
       lastTime = performance.now();
       nextEnemyId = 1;
       enemyTimer = 0;
@@ -704,6 +710,21 @@
       updateHud();
     }
 
+    function destroyPlayer() {
+      if (playerDestroyed || endingTimer > 0) return;
+      lives = 0;
+      playerDestroyed = true;
+      playing = false;
+      awaitingNextMinute = false;
+      pendingEndTitle = "飞船退场";
+      endingTimer = 0.85;
+      pulse(player.x, player.y, "#ff5c7a", 58);
+      pulse(player.x - 18, player.y + 8, "#ffcc66", 36);
+      pulse(player.x + 16, player.y - 10, "#ff7a3d", 34);
+      playSound("bigBoom");
+      updateHud();
+    }
+
     function loop(now) {
       const dt = Math.min((now - lastTime) / 1000 || 0, 0.033);
       lastTime = now;
@@ -714,7 +735,14 @@
 
     function update(dt) {
       moveStars(dt);
-      if (!playing) return;
+      if (!playing) {
+        updateBursts(dt);
+        if (endingTimer > 0) {
+          endingTimer -= dt;
+          if (endingTimer <= 0) endGame(pendingEndTitle || "飞船退场");
+        }
+        return;
+      }
 
       elapsedTime += dt;
       shotCooldown = Math.max(0, shotCooldown - dt);
@@ -1296,7 +1324,7 @@
             lives -= 1;
             player.invincible = 1.2;
             playSound("hurt");
-            if (lives <= 0) endGame("飞船退场");
+            if (lives <= 0) destroyPlayer();
           }
         }
       }
@@ -1342,7 +1370,7 @@
           player.invincible = 0.45;
           pulse(player.x, player.y, "#ff5c7a", 20);
           playSound("hurt");
-          if (lives <= 0) endGame("飞船退场");
+          if (lives <= 0) destroyPlayer();
         }
       }
     }
@@ -1409,7 +1437,7 @@
           lives -= 2;
           player.invincible = 1.35;
           playSound("hurt");
-          if (lives <= 0) endGame("飞船退场");
+          if (lives <= 0) destroyPlayer();
         }
       }
     }
@@ -1724,6 +1752,7 @@
     }
 
     function drawPlayer() {
+      if (playerDestroyed) return;
       ctx.save();
       ctx.translate(player.x, player.y);
       if (player.invincible > 0 && Math.floor(player.invincible * 10) % 2 === 0) ctx.globalAlpha = 0.45;

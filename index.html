@@ -364,7 +364,7 @@
           <h2 id="resultTitle">总计</h2>
           <p id="resultSummary">本局统计</p>
           <div class="total-page show" id="resultStats"></div>
-          <button id="resultAction" type="button">再玩一次</button>
+          <button id="resultAction" type="button">回到机库</button>
         </div>
       </div>
     </section>
@@ -800,7 +800,7 @@
       showResultPage({
         title,
         summary: "本局结束，再来一局冲更远。",
-        action: "再玩一次",
+        action: "回到机库",
         result: title,
         minute: challengeMinute,
         minuteScore: score,
@@ -856,6 +856,18 @@
     function showTotalPage(stats) {
       totalPage.innerHTML = totalMarkup(stats);
       totalPage.classList.add("show");
+    }
+
+    function showHangarPage() {
+      resultScreen.classList.remove("show");
+      totalPage.classList.remove("show");
+      totalPage.innerHTML = "";
+      headline.textContent = "一分钟挑战赛";
+      summary.textContent = "选择飞机，准备下一局挑战。";
+      restart.textContent = "开始挑战";
+      awaitingNextMinute = false;
+      overlay.classList.add("show");
+      renderHangar();
     }
 
     function destroyPlayer() {
@@ -2535,8 +2547,8 @@
     }
 
     function primaryAction() {
-      resultScreen.classList.remove("show");
       if (awaitingNextMinute) continueNextMinute();
+      else if (resultScreen.classList.contains("show")) showHangarPage();
       else startGame();
     }
 

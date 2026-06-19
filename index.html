@@ -326,6 +326,7 @@
       { id: "fortress", name: "堡垒战机", cost: 1200, maxLives: 10, attack: 0.55, speed: 245, durability: 6, desc: "超高血量，火力很弱" },
       { id: "phoenix", name: "凤凰战机", cost: 1500, maxLives: 6, attack: 1.05, speed: 330, durability: 5, desc: "生命不错，续航稳定" },
       { id: "phantom", name: "幽灵战机", cost: 2000, maxLives: 4, attack: 1.6, speed: 390, durability: 4, desc: "高攻高速，容错较低" },
+      { id: "awacs", name: "雷达预警机", cost: 1800, maxLives: 5, attack: 0.85, speed: 315, durability: 5, desc: "提前预判流星" },
       { id: "ufo", name: "星环飞碟", cost: 2400, maxLives: 7, attack: 1.2, speed: 350, durability: 5, desc: "自动八方向散射" },
       { id: "rocket", name: "烈焰火箭", cost: 4200, maxLives: 3, attack: 1.9, speed: 455, durability: 3, desc: "导弹和返航小飞机" }
     ];
@@ -348,6 +349,7 @@
     let finalBossSpawned = false;
     let meteorTimer = 6;
     let meteorStormTimer = 22;
+    let radarWarning = 0;
     let shotCooldown = 0;
     let powerTimer = 9;
     let powerupsSpawned = 0;
@@ -440,6 +442,7 @@
       finalBossSpawned = false;
       meteorTimer = new URLSearchParams(location.search).has("testMeteor") ? 1 : 5;
       meteorStormTimer = new URLSearchParams(location.search).has("testMeteor") ? 7 : 22;
+      radarWarning = 0;
       shotCooldown = 0;
       ufoBurstCooldown = 1.1;
       rocketMissileCooldown = 0.8;
@@ -725,11 +728,13 @@
       bossTimer -= dt;
       meteorTimer -= dt;
       meteorStormTimer -= dt;
+      radarWarning = Math.max(0, radarWarning - dt);
       powerTimer -= dt;
       splitterTimer -= dt;
 
       movePlayer(dt);
       shoot();
+      updateRadarWarning();
       if (enemyTimer <= 0) spawnEnemy();
       if (bossTimer <= 0) spawnBoss();
       if (meteorTimer <= 0) spawnMeteor();
@@ -780,6 +785,16 @@
       const length = Math.hypot(dx, dy) || 1;
       player.x = clamp(player.x + (dx / length) * player.speed * dt, 24, width - 24);
       player.y = clamp(player.y + (dy / length) * player.speed * dt, 86, height - 36);
+    }
+
+    function updateRadarWarning() {
+      if (getSelectedAircraft().id !== "awacs") return;
+      const stormSoon = meteorStormTimer > 0 && meteorStormTimer <= 3.2;
+      const meteorSoon = meteorTimer > 0 && meteorTimer <= 2.4;
+      if ((stormSoon || meteorSoon) && radarWarning <= 0) {
+        radarWarning = stormSoon ? 1.4 : 1.0;
+        playSound("warning");
+      }
     }
 
     function shoot() {
@@ -1648,6 +1663,7 @@
       drawFriendlyDrones();
       drawPlayer();
       drawBursts();
+      drawRadarWarning();
     }
 
     function drawSpace() {
@@ -1724,6 +1740,7 @@
         fortress: ["#f4fbff", "#8b97a7", "#343b47"],
         phoenix: ["#fff1dc", "#ff7a3d", "#7a2637"],
         phantom: ["#f2e9ff", "#d88cff", "#321b55"],
+        awacs: ["#eafff5", "#65ffa8", "#1e4d5b"],
         ufo: ["#eafff5", "#65ffa8", "#24595d"],
         rocket: ["#fff5d8", "#ff5c7a", "#72223a"]
       };
@@ -1764,6 +1781,12 @@
           tails: [[-9, 22], [-20, 33], [-3, 28], [9, 22], [20, 33], [3, 28]],
           cockpit: [0, -15, 4, 10],
           core: [-3, -2, 6, 23]
+        },
+        awacs: {
+          body: [[0, -30], [8, -18], [10, 6], [34, 17], [13, 20], [8, 32], [0, 26], [-8, 32], [-13, 20], [-34, 17], [-10, 6], [-8, -18]],
+          tails: [[-15, 22], [-26, 35], [-6, 29], [15, 22], [26, 35], [6, 29]],
+          cockpit: [0, -11, 5.8, 8],
+          core: [-4, -2, 8, 21]
         },
         ufo: {
           body: [[0, -23], [19, -17], [40, -2], [34, 13], [14, 23], [0, 26], [-14, 23], [-34, 13], [-40, -2], [-19, -17]],
@@ -1827,6 +1850,16 @@
       ctx.beginPath();
       ctx.roundRect(shape.core[0], shape.core[1], shape.core[2], shape.core[3], 3);
       ctx.fill();
+
+      if (aircraft.id === "awacs") {
+        ctx.strokeStyle = "#65ffa8";
+        ctx.fillStyle = "rgba(101, 255, 168, 0.24)";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.ellipse(0, -24, 18, 5.5, Math.sin(performance.now() / 260) * 0.6, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+      }
 
       ctx.fillStyle = "#ffe066";
       ctx.beginPath();
@@ -2223,6 +2256,28 @@
       }
       ctx.globalAlpha = 1;
       ctx.globalCompositeOperation = "source-over";
+    }
+
+    function drawRadarWarning() {
+      if (radarWarning <= 0 || !playing || getSelectedAircraft().id !== "awacs") return;
+      const alpha = Math.min(1, radarWarning);
+      const scan = (performance.now() / 7) % width;
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = "rgba(6, 21, 31, 0.72)";
+      ctx.fillRect(0, 86, width, 44);
+      ctx.strokeStyle = "rgba(101, 255, 168, 0.55)";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(scan, 88);
+      ctx.lineTo(scan - 42, 130);
+      ctx.stroke();
+      ctx.fillStyle = "#65ffa8";
+      ctx.font = "800 20px Arial, sans-serif";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText("雷达预警：流星接近", width / 2, 108);
+      ctx.restore();
     }
 
     function distance(a, b) {

@@ -183,6 +183,35 @@
       font-variant-numeric: tabular-nums;
     }
 
+    .result-screen {
+      position: absolute;
+      inset: 0;
+      z-index: 4;
+      display: none;
+      align-content: center;
+      justify-items: center;
+      padding: 24px;
+      background: linear-gradient(180deg, rgba(4, 9, 23, 0.96), rgba(19, 11, 35, 0.96));
+      text-align: center;
+    }
+
+    .result-screen.show {
+      display: grid;
+    }
+
+    .result-panel {
+      width: min(100%, 520px);
+    }
+
+    .result-panel h2 {
+      margin: 0 0 8px;
+      font-size: 34px;
+    }
+
+    .result-panel p {
+      margin-bottom: 16px;
+    }
+
     button {
       width: 100%;
       min-height: 46px;
@@ -330,6 +359,14 @@
           <div class="hangar" id="hangar" aria-label="飞机选择"></div>
         </div>
       </div>
+      <div class="result-screen" id="resultScreen" aria-label="总计页面">
+        <div class="result-panel">
+          <h2 id="resultTitle">总计</h2>
+          <p id="resultSummary">本局统计</p>
+          <div class="total-page show" id="resultStats"></div>
+          <button id="resultAction" type="button">再玩一次</button>
+        </div>
+      </div>
     </section>
   </main>
 
@@ -346,6 +383,11 @@
     const totalPage = document.getElementById("totalPage");
     const restart = document.getElementById("restart");
     const hangar = document.getElementById("hangar");
+    const resultScreen = document.getElementById("resultScreen");
+    const resultTitle = document.getElementById("resultTitle");
+    const resultSummary = document.getElementById("resultSummary");
+    const resultStats = document.getElementById("resultStats");
+    const resultAction = document.getElementById("resultAction");
     const AudioContextClass = window.AudioContext || window.webkitAudioContext;
 
     const keys = new Set();
@@ -470,6 +512,7 @@
       playSound("start");
       totalPage.classList.remove("show");
       totalPage.innerHTML = "";
+      resultScreen.classList.remove("show");
       totalScore = 0;
       challengeMinute = 1;
       lives = aircraft.maxLives;
@@ -722,6 +765,7 @@
     function continueNextMinute() {
       ensureAudio();
       playSound("start");
+      resultScreen.classList.remove("show");
       awaitingNextMinute = false;
       challengeMinute += 1;
       startMinute(true);
@@ -732,11 +776,17 @@
       awaitingNextMinute = true;
       totalScore += score;
       const earned = awardBattlePoints(Math.max(5, Math.floor(score / 40)));
-      headline.textContent = `第 ${challengeMinute} 分钟通关`;
-      summary.textContent = "本分钟通关，奖励 1 条生命，继续下一分钟！";
-      showTotalPage({ result: "通关", minute: challengeMinute, minuteScore: score, target: minuteTarget, total: totalScore, earned });
-      restart.textContent = "下一分钟";
-      overlay.classList.add("show");
+      showResultPage({
+        title: `第 ${challengeMinute} 分钟通关`,
+        summary: "本分钟通关，奖励 1 条生命，继续下一分钟！",
+        action: "下一分钟",
+        result: "通关",
+        minute: challengeMinute,
+        minuteScore: score,
+        target: minuteTarget,
+        total: totalScore,
+        earned
+      });
       renderHangar();
       playSound("win");
       updateHud();
@@ -747,18 +797,24 @@
       awaitingNextMinute = false;
       const earned = awardBattlePoints(Math.floor(score / 70));
       const finalScore = totalScore + score;
-      headline.textContent = title;
-      summary.textContent = "本局结束，再来一局冲更远。";
-      showTotalPage({ result: title, minute: challengeMinute, minuteScore: score, target: minuteTarget, total: finalScore, earned });
-      restart.textContent = "再玩一次";
-      overlay.classList.add("show");
+      showResultPage({
+        title,
+        summary: "本局结束，再来一局冲更远。",
+        action: "再玩一次",
+        result: title,
+        minute: challengeMinute,
+        minuteScore: score,
+        target: minuteTarget,
+        total: finalScore,
+        earned
+      });
       renderHangar();
       playSound(title === "挑战成功" ? "win" : "lose");
       updateHud();
     }
 
-    function showTotalPage(stats) {
-      totalPage.innerHTML = `
+    function totalMarkup(stats) {
+      return `
         <div class="total-grid">
           <div class="total-item">
             <span class="total-label">结果</span>
@@ -786,6 +842,19 @@
           </div>
         </div>
       `;
+    }
+
+    function showResultPage(stats) {
+      resultTitle.textContent = stats.title;
+      resultSummary.textContent = stats.summary;
+      resultStats.innerHTML = totalMarkup(stats);
+      resultAction.textContent = stats.action;
+      overlay.classList.remove("show");
+      resultScreen.classList.add("show");
+    }
+
+    function showTotalPage(stats) {
+      totalPage.innerHTML = totalMarkup(stats);
       totalPage.classList.add("show");
     }
 
@@ -2466,6 +2535,7 @@
     }
 
     function primaryAction() {
+      resultScreen.classList.remove("show");
       if (awaitingNextMinute) continueNextMinute();
       else startGame();
     }
@@ -2495,9 +2565,11 @@
       touching = false;
     });
     restart.addEventListener("click", primaryAction);
+    resultAction.addEventListener("click", primaryAction);
     hangar.addEventListener("click", handleHangarClick);
     overlay.addEventListener("pointerdown", event => event.stopPropagation());
     overlay.addEventListener("touchmove", event => event.stopPropagation(), { passive: true });
+    resultScreen.addEventListener("pointerdown", event => event.stopPropagation());
 
     function moveTouch(event) {
       if (!playing) return;

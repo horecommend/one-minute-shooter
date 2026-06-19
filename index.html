@@ -691,7 +691,7 @@
       totalScore += score;
       const earned = awardBattlePoints(Math.max(5, Math.floor(score / 40)));
       headline.textContent = `第 ${challengeMinute} 分钟通关`;
-      summary.textContent = `本分钟 ${score} 分，总分 ${totalScore}。获得 ${earned} 战斗积分，奖励 1 条生命，继续下一分钟！`;
+      summary.innerHTML = `本分钟 ${score} 分，奖励 1 条生命，继续下一分钟！<br>总计：第 ${challengeMinute} 分钟 · 总分 ${totalScore} · 获得 ${earned} 战斗积分`;
       restart.textContent = "下一分钟";
       overlay.classList.add("show");
       renderHangar();
@@ -703,8 +703,9 @@
       playing = false;
       awaitingNextMinute = false;
       const earned = awardBattlePoints(Math.floor(score / 70));
+      const finalScore = totalScore + score;
       headline.textContent = title;
-      summary.textContent = `坚持到第 ${challengeMinute} 分钟，本分钟 ${score}/${minuteTarget}，总分 ${totalScore + score}。获得 ${earned} 战斗积分，再来一局冲更远。`;
+      summary.innerHTML = `本分钟 ${score}/${minuteTarget}。再来一局冲更远。<br>总计：坚持到第 ${challengeMinute} 分钟 · 总分 ${finalScore} · 获得 ${earned} 战斗积分`;
       restart.textContent = "再玩一次";
       overlay.classList.add("show");
       renderHangar();

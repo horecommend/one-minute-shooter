@@ -353,8 +353,8 @@
       <canvas id="canvas" aria-label="游戏画面"></canvas>
       <div class="hud" aria-live="polite">
         <div class="meter">
-          <span class="label">时间</span>
-          <span class="value" id="time">60</span>
+          <span class="label">关卡</span>
+          <span class="value" id="time">1</span>
         </div>
         <div class="meter">
           <span class="label">分数</span>
@@ -365,11 +365,11 @@
           <span class="value" id="lives">3</span>
         </div>
       </div>
-      <div class="tip">60 秒达成目标分即可进入下一分钟。方向键 / WASD 移动，子弹自动发射。</div>
+      <div class="tip">达成目标分即可进入下一关。方向键 / WASD 移动，子弹自动发射。</div>
       <div class="overlay show" id="overlay">
         <div class="message">
           <h1 id="headline">一分钟挑战赛</h1>
-          <p id="summary">每分钟达成目标分就通关，通关后继续下一分钟。</p>
+          <p id="summary">每关达成目标分就通关，通关后继续下一关。</p>
           <div class="total-page" id="totalPage" aria-label="总计页面"></div>
           <button id="restart" type="button">开始挑战</button>
           <div class="hangar" id="hangar" aria-label="飞机选择"></div>
@@ -583,7 +583,7 @@
 
     function updateHud() {
       scoreEl.textContent = `${score}/${minuteTarget}`;
-      timeEl.textContent = String(Math.max(0, Math.ceil(60 - elapsedTime)));
+      timeEl.textContent = String(challengeMinute);
       livesEl.textContent = Number.isInteger(lives) ? String(lives) : lives.toFixed(1);
     }
 
@@ -805,9 +805,9 @@
       totalScore += score;
       const earned = awardBattlePoints(Math.max(5, Math.floor(score / 40)));
       showResultPage({
-        title: `第 ${challengeMinute} 分钟通关`,
-        summary: "本分钟通关，奖励 1 条生命，继续下一分钟！",
-        action: "下一分钟",
+        title: `第 ${challengeMinute} 关通关`,
+        summary: "本关通关，奖励 1 条生命，继续下一关！",
+        action: "下一关",
         result: "通关",
         minute: challengeMinute,
         minuteScore: score,
@@ -850,10 +850,10 @@
           </div>
           <div class="total-item">
             <span class="total-label">到达</span>
-            <span class="total-value">第 ${stats.minute} 分钟</span>
+            <span class="total-value">第 ${stats.minute} 关</span>
           </div>
           <div class="total-item">
-            <span class="total-label">本分钟</span>
+            <span class="total-label">本关</span>
             <span class="total-value">${stats.minuteScore}/${stats.target}</span>
           </div>
           <div class="total-item">
@@ -979,7 +979,6 @@
       }
 
       if (score >= minuteTarget) finishMinute();
-      else if (elapsedTime >= 60) endGame("时间到");
       updateHud();
     }
 

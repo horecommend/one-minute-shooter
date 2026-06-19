@@ -476,6 +476,9 @@
     let audioCtx = null;
     let lastShotSound = 0;
     let battlePoints = loadNumber("oneMinuteShooterBattlePoints", 0);
+    let trialCards = loadNumber("oneMinuteShooterTrialCards", 0);
+    let activeTrialAircraftId = "";
+    let trialInUseId = "";
     let ownedAircrafts = loadOwnedAircrafts();
     let aircraftUses = loadAircraftUses();
     let selectedAircraftId = loadSelectedAircraft();
@@ -533,6 +536,7 @@
         return;
       }
       consumeAircraftUse(aircraft);
+      trialInUseId = activeTrialAircraftId === aircraft.id ? aircraft.id : "";
       playSound("start");
       totalPage.classList.remove("show");
       totalPage.innerHTML = "";
@@ -608,7 +612,7 @@
       hangar.innerHTML = `
         <div class="hangar-head">
           <span>机库</span>
-          <span>战斗积分：${battlePoints}</span>
+          <span>战斗积分：${battlePoints} · 试用卡：${trialCards}</span>
         </div>
         <div class="hangar-notice" id="hangarNotice"></div>
         ${aircrafts.map(aircraft => {
@@ -616,7 +620,8 @@
           const selected = aircraft.id === selectedAircraftId;
           const broken = owned && isAircraftBroken(aircraft);
           const usesText = hasInfiniteDurability(aircraft) ? "无限耐久" : `剩余 ${getAircraftUses(aircraft)}/${aircraft.durability} 局`;
-          const action = !owned ? `${aircraft.cost} 购买` : broken ? `${repairCost(aircraft)} 修复` : selected ? "已选择" : "选择";
+          const trialing = activeTrialAircraftId === aircraft.id;
+          const action = !owned ? (trialing ? "试用中" : trialCards > 0 ? `${aircraft.cost} 购买/试用` : `${aircraft.cost} 购买`) : broken ? `${repairCost(aircraft)} 修复` : selected ? "已选择" : "选择";
           return `
             <div class="plane-card ${selected ? "selected" : ""}">
               <canvas class="plane-preview" width="104" height="104" data-aircraft-preview="${aircraft.id}" aria-hidden="true"></canvas>
@@ -660,6 +665,17 @@
       if (!aircraft) return;
       if (!ownedAircrafts.includes(aircraft.id)) {
         if (battlePoints < aircraft.cost) {
+          if (trialCards > 0) {
+            trialCards -= 1;
+            activeTrialAircraftId = aircraft.id;
+            selectedAircraftId = aircraft.id;
+            saveHangar();
+            renderHangar();
+            summary.textContent = `已使用试用卡：${aircraft.name} 可试用一局。`;
+            showHangarNotice(`${aircraft.name} 试用中，开始挑战即可体验`);
+            playSound("buy");
+            return;
+          }
           const shortage = aircraft.cost - battlePoints;
           summary.textContent = `${aircraft.name} 还差 ${shortage} 战斗积分。`;
           showHangarNotice(`买不起 ${aircraft.name}，还差 ${shortage} 战斗积分`);
@@ -705,6 +721,7 @@
     function saveHangar() {
       try {
         localStorage.setItem("oneMinuteShooterBattlePoints", String(battlePoints));
+        localStorage.setItem("oneMinuteShooterTrialCards", String(trialCards));
         localStorage.setItem("oneMinuteShooterOwnedAircrafts", JSON.stringify(ownedAircrafts));
         localStorage.setItem("oneMinuteShooterAircraftUses", JSON.stringify(aircraftUses));
         localStorage.setItem("oneMinuteShooterSelectedAircraft", selectedAircraftId);
@@ -861,8 +878,18 @@
         earned
       });
       renderHangar();
+      finishTrialIfNeeded();
       playSound(title === "挑战成功" ? "win" : "lose");
       updateHud();
+    }
+
+    function finishTrialIfNeeded() {
+      if (!trialInUseId) return;
+      activeTrialAircraftId = "";
+      trialInUseId = "";
+      selectedAircraftId = "j15";
+      saveHangar();
+      renderHangar();
     }
 
     function totalMarkup(stats) {
@@ -911,6 +938,7 @@
     }
 
     function showHangarPage() {
+      finishTrialIfNeeded();
       resultScreen.classList.remove("show");
       totalPage.classList.remove("show");
       totalPage.innerHTML = "";
@@ -1224,8 +1252,8 @@
     }
 
     function spawnPowerup() {
-      const kinds = ["rapid", "shield", "heavy", "bomb", "heart"];
-      const kind = powerupsSpawned === 0 ? "heavy" : powerupsSpawned === 1 ? "bomb" : powerupsSpawned === 2 ? "heart" : kinds[Math.floor(Math.random() * kinds.length)];
+      const kinds = ["rapid", "shield", "heavy", "bomb", "heart", "trial"];
+      const kind = powerupsSpawned === 0 ? "heavy" : powerupsSpawned === 1 ? "bomb" : powerupsSpawned === 2 ? "heart" : powerupsSpawned === 3 ? "trial" : kinds[Math.floor(Math.random() * kinds.length)];
       const nearPlayer = powerupsSpawned < 3;
       powerups.push({
         x: nearPlayer ? clamp(player.x, 28, width - 28) : 28 + Math.random() * (width - 56),
@@ -1552,9 +1580,14 @@
           if (p.kind === "heavy") heavyFire = 7;
           if (p.kind === "bomb") triggerBomb(p.x, p.y);
           if (p.kind === "heart") lives = Math.min(getSelectedAircraft().maxLives, lives + 1);
+          if (p.kind === "trial") {
+            trialCards += 1;
+            saveHangar();
+            renderHangar();
+          }
           score += 10;
           pulse(p.x, p.y, powerupColor(p.kind), 22);
-          if (p.kind !== "bomb") playSound(p.kind === "heart" ? "heart" : "power");
+          if (p.kind !== "bomb") playSound(p.kind === "heart" ? "heart" : p.kind === "trial" ? "buy" : "power");
         }
       }
     }
@@ -2539,6 +2572,19 @@
           ctx.bezierCurveTo(-p.r * 1.25, -p.r * 0.12, -p.r * 0.76, -p.r * 1.02, 0, -p.r * 0.44);
           ctx.bezierCurveTo(p.r * 0.76, -p.r * 1.02, p.r * 1.25, -p.r * 0.12, 0, p.r * 0.72);
           ctx.fill();
+        } else if (p.kind === "trial") {
+          ctx.fillStyle = "#b6fbff";
+          ctx.strokeStyle = "#ffe066";
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.roundRect(-12, -15, 24, 30, 5);
+          ctx.fill();
+          ctx.stroke();
+          ctx.fillStyle = "#12314a";
+          ctx.font = "800 13px Arial, sans-serif";
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText("试", 0, 1);
         } else {
           ctx.beginPath();
           for (let i = 0; i < 5; i++) {
@@ -2559,6 +2605,7 @@
       if (kind === "shield") return "#65ffa8";
       if (kind === "heavy") return "#ff7a3d";
       if (kind === "heart") return "#ff7aa8";
+      if (kind === "trial") return "#b6fbff";
       return "#d88cff";
     }
 

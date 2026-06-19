@@ -348,8 +348,6 @@
     let finalBossSpawned = false;
     let meteorTimer = 6;
     let meteorStormTimer = 22;
-    let meteorStormArmed = false;
-    let meteorAlert = 0;
     let shotCooldown = 0;
     let powerTimer = 9;
     let powerupsSpawned = 0;
@@ -442,8 +440,6 @@
       finalBossSpawned = false;
       meteorTimer = new URLSearchParams(location.search).has("testMeteor") ? 1 : 5;
       meteorStormTimer = new URLSearchParams(location.search).has("testMeteor") ? 7 : 22;
-      meteorStormArmed = false;
-      meteorAlert = 0;
       shotCooldown = 0;
       ufoBurstCooldown = 1.1;
       rocketMissileCooldown = 0.8;
@@ -729,7 +725,6 @@
       bossTimer -= dt;
       meteorTimer -= dt;
       meteorStormTimer -= dt;
-      meteorAlert = Math.max(0, meteorAlert - dt);
       powerTimer -= dt;
       splitterTimer -= dt;
 
@@ -738,11 +733,6 @@
       if (enemyTimer <= 0) spawnEnemy();
       if (bossTimer <= 0) spawnBoss();
       if (meteorTimer <= 0) spawnMeteor();
-      if (meteorStormTimer <= 2.2 && !meteorStormArmed) {
-        meteorStormArmed = true;
-        meteorAlert = 2.2;
-        playSound("warning");
-      }
       if (meteorStormTimer <= 0) spawnMeteorStorm();
       const finalBossScore = new URLSearchParams(location.search).has("testFinalBoss") ? 120 : Math.floor(minuteTarget * 0.75);
       if (!finalBossSpawned && score >= finalBossScore) spawnFinalBoss();
@@ -1024,8 +1014,6 @@
         spawnMeteor(kinds[Math.floor(Math.random() * kinds.length)], true);
       }
       meteorStormTimer = 18 + Math.random() * 10;
-      meteorStormArmed = false;
-      meteorAlert = 0.8;
       meteorTimer = Math.max(meteorTimer, 4);
       playSound("meteor");
     }
@@ -1660,7 +1648,6 @@
       drawFriendlyDrones();
       drawPlayer();
       drawBursts();
-      drawMeteorAlert();
     }
 
     function drawSpace() {
@@ -1987,23 +1974,6 @@
         ctx.restore();
       }
       ctx.shadowBlur = 0;
-    }
-
-    function drawMeteorAlert() {
-      if (meteorAlert <= 0 || !playing) return;
-      ctx.save();
-      ctx.globalAlpha = Math.min(1, meteorAlert);
-      ctx.fillStyle = "rgba(255, 92, 122, 0.16)";
-      ctx.fillRect(0, 86, width, 48);
-      ctx.fillStyle = "#ffe066";
-      ctx.strokeStyle = "rgba(255, 92, 122, 0.72)";
-      ctx.lineWidth = 3;
-      ctx.font = "800 22px Arial, sans-serif";
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      ctx.strokeText("流星雨来了！", width / 2, 110);
-      ctx.fillText("流星雨来了！", width / 2, 110);
-      ctx.restore();
     }
 
     function drawSplitters() {

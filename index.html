@@ -1396,7 +1396,8 @@
             } else {
               enemies.splice(j, 1);
               defeatEnemy(e);
-              pulse(e.x, e.y, "#ffcc66", 28);
+              pulse(e.x, e.y, e.type === "fighter" ? "#7df9ff" : "#ffcc66", e.type === "fighter" ? 38 : 28);
+              pulse(m.x, m.y, "#ff9f45", 18);
               playSound("boom");
             }
           }

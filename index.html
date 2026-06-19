@@ -1,0 +1,2314 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>一分钟挑战赛</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --panel: rgba(8, 16, 28, 0.72);
+      --line: rgba(255, 255, 255, 0.18);
+      --text: #f4fbff;
+      --muted: #b9c9d6;
+      --accent: #35d0ff;
+      --danger: #ff5c7a;
+      --gold: #ffe066;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      overflow: hidden;
+      font-family: Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 15% 12%, rgba(255, 122, 61, 0.16), transparent 18rem),
+        radial-gradient(circle at 84% 18%, rgba(53, 208, 255, 0.22), transparent 22rem),
+        radial-gradient(circle at 42% 84%, rgba(216, 140, 255, 0.14), transparent 20rem),
+        linear-gradient(145deg, #040815 0%, #0b1a2b 46%, #160f2a 100%);
+    }
+
+    .game {
+      position: fixed;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      padding: 12px;
+    }
+
+    .stage {
+      position: relative;
+      width: min(100vw - 24px, 480px);
+      height: min(100vh - 24px, 760px);
+      min-height: 520px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+      background: #030817;
+      box-shadow:
+        0 18px 70px rgba(0, 0, 0, 0.42),
+        inset 0 0 70px rgba(53, 208, 255, 0.08);
+      touch-action: none;
+    }
+
+    canvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .hud {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      right: 10px;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+      z-index: 2;
+      pointer-events: none;
+    }
+
+    .meter {
+      min-width: 0;
+      padding: 8px 10px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      backdrop-filter: blur(10px);
+    }
+
+    .label {
+      display: block;
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1.2;
+      white-space: nowrap;
+    }
+
+    .value {
+      display: block;
+      margin-top: 2px;
+      font-size: 21px;
+      font-weight: 800;
+      line-height: 1;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .overlay {
+      position: absolute;
+      inset: 0;
+      z-index: 3;
+      display: none;
+      place-items: center;
+      padding: 22px;
+      text-align: center;
+      background: rgba(3, 8, 14, 0.62);
+      backdrop-filter: blur(5px);
+      touch-action: pan-y;
+    }
+
+    .overlay.show {
+      display: grid;
+    }
+
+    .message {
+      width: min(100%, 430px);
+      max-height: calc(100vh - 46px);
+      overflow: auto;
+      overscroll-behavior: contain;
+      -webkit-overflow-scrolling: touch;
+      touch-action: pan-y;
+      padding: 22px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(7, 17, 31, 0.9);
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 30px;
+      letter-spacing: 0;
+    }
+
+    p {
+      margin: 12px 0 18px;
+      color: var(--muted);
+      font-size: 15px;
+      line-height: 1.65;
+    }
+
+    button {
+      width: 100%;
+      min-height: 46px;
+      border: 0;
+      border-radius: 8px;
+      color: #05101b;
+      background: linear-gradient(180deg, #71e3ff, var(--accent));
+      font: inherit;
+      font-weight: 800;
+      cursor: pointer;
+      box-shadow: 0 10px 28px rgba(53, 208, 255, 0.26);
+    }
+
+    button:active {
+      transform: translateY(1px);
+    }
+
+    .hangar {
+      margin-top: 14px;
+      display: grid;
+      gap: 8px;
+      text-align: left;
+    }
+
+    .hangar-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .plane-card {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      align-items: center;
+      padding: 9px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .plane-card.selected {
+      border-color: var(--accent);
+      box-shadow: inset 0 0 22px rgba(53, 208, 255, 0.12);
+    }
+
+    .plane-name {
+      font-size: 14px;
+      font-weight: 800;
+    }
+
+    .plane-stats {
+      margin-top: 3px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    .plane-card button {
+      width: auto;
+      min-width: 76px;
+      min-height: 34px;
+      padding: 0 10px;
+      box-shadow: none;
+      font-size: 13px;
+    }
+
+    .tip {
+      position: absolute;
+      left: 10px;
+      right: 10px;
+      bottom: 10px;
+      z-index: 2;
+      padding: 9px 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      color: var(--muted);
+      background: var(--panel);
+      font-size: 13px;
+      text-align: center;
+      pointer-events: none;
+      backdrop-filter: blur(10px);
+    }
+
+    @media (max-width: 420px) {
+      .game {
+        padding: 0;
+      }
+
+      .stage {
+        width: 100vw;
+        height: 100vh;
+        min-height: 100vh;
+        border: 0;
+        border-radius: 0;
+      }
+
+      .hud {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 6px;
+      }
+
+      .meter {
+        padding: 7px 8px;
+      }
+
+      .value {
+        font-size: 18px;
+      }
+
+      .tip {
+        font-size: 12px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="game" aria-label="一分钟挑战赛射击游戏">
+    <section class="stage" id="stage">
+      <canvas id="canvas" aria-label="游戏画面"></canvas>
+      <div class="hud" aria-live="polite">
+        <div class="meter">
+          <span class="label">时间</span>
+          <span class="value" id="time">60</span>
+        </div>
+        <div class="meter">
+          <span class="label">分数</span>
+          <span class="value" id="score">0/2000</span>
+        </div>
+        <div class="meter">
+          <span class="label">生命</span>
+          <span class="value" id="lives">3</span>
+        </div>
+      </div>
+      <div class="tip">60 秒达成目标分即可进入下一分钟。方向键 / WASD 移动，子弹自动发射。</div>
+      <div class="overlay show" id="overlay">
+        <div class="message">
+          <h1 id="headline">一分钟挑战赛</h1>
+          <p id="summary">每分钟达成目标分就通关，通关后继续下一分钟。</p>
+          <button id="restart" type="button">开始挑战</button>
+          <div class="hangar" id="hangar" aria-label="飞机选择"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const stage = document.getElementById("stage");
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d");
+    const scoreEl = document.getElementById("score");
+    const timeEl = document.getElementById("time");
+    const livesEl = document.getElementById("lives");
+    const overlay = document.getElementById("overlay");
+    const headline = document.getElementById("headline");
+    const summary = document.getElementById("summary");
+    const restart = document.getElementById("restart");
+    const hangar = document.getElementById("hangar");
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+
+    const keys = new Set();
+    const stars = [];
+    const bullets = [];
+    const enemyBullets = [];
+    const enemies = [];
+    const bursts = [];
+    const powerups = [];
+    const splitters = [];
+    const meteors = [];
+    const friendlyDrones = [];
+    const aircrafts = [
+      { id: "j15", name: "歼15", cost: 0, maxLives: 5, attack: 1, speed: 320, durability: Infinity, desc: "均衡型" },
+      { id: "armor", name: "重甲战机", cost: 500, maxLives: 8, attack: 0.7, speed: 280, durability: 5, desc: "血量高，攻击低" },
+      { id: "storm", name: "雷霆战机", cost: 800, maxLives: 4, attack: 1.35, speed: 365, durability: 4, desc: "攻击高，血量低" },
+      { id: "gale", name: "疾风战机", cost: 950, maxLives: 3, attack: 1.15, speed: 430, durability: 4, desc: "速度极快，适合躲弹" },
+      { id: "fortress", name: "堡垒战机", cost: 1200, maxLives: 10, attack: 0.55, speed: 245, durability: 6, desc: "超高血量，火力很弱" },
+      { id: "phoenix", name: "凤凰战机", cost: 1500, maxLives: 6, attack: 1.05, speed: 330, durability: 5, desc: "生命不错，续航稳定" },
+      { id: "phantom", name: "幽灵战机", cost: 2000, maxLives: 4, attack: 1.6, speed: 390, durability: 4, desc: "高攻高速，容错较低" },
+      { id: "ufo", name: "星环飞碟", cost: 2400, maxLives: 7, attack: 1.2, speed: 350, durability: 5, desc: "自动八方向散射" },
+      { id: "rocket", name: "烈焰火箭", cost: 4200, maxLives: 3, attack: 1.9, speed: 455, durability: 3, desc: "导弹和返航小飞机" }
+    ];
+
+    let width = 0;
+    let height = 0;
+    let dpr = 1;
+    let score = 0;
+    let totalScore = 0;
+    let lives = 5;
+    let elapsedTime = 0;
+    let challengeMinute = 1;
+    let minuteTarget = 2000;
+    let awaitingNextMinute = false;
+    let playing = false;
+    let lastTime = 0;
+    let nextEnemyId = 1;
+    let enemyTimer = 0;
+    let bossTimer = 15;
+    let finalBossSpawned = false;
+    let meteorTimer = 6;
+    let meteorStormTimer = 22;
+    let meteorStormArmed = false;
+    let meteorAlert = 0;
+    let shotCooldown = 0;
+    let powerTimer = 9;
+    let powerupsSpawned = 0;
+    let splitterTimer = 4;
+    let splittersSpawned = 0;
+    let rapidFire = 0;
+    let shield = 0;
+    let heavyFire = 0;
+    let ufoBurstCooldown = 0;
+    let rocketMissileCooldown = 0;
+    let rocketDroneCooldown = 0;
+    let touching = false;
+    let audioCtx = null;
+    let lastShotSound = 0;
+    let battlePoints = loadNumber("oneMinuteShooterBattlePoints", 0);
+    let ownedAircrafts = loadOwnedAircrafts();
+    let aircraftUses = loadAircraftUses();
+    let selectedAircraftId = loadSelectedAircraft();
+    resetOwnedAircraftsForPurchase();
+    resetBattlePointsOnce();
+    grantStarterBattlePoints();
+    const fallbackSoundCache = {};
+
+    const player = {
+      x: 0,
+      y: 0,
+      r: 18,
+      speed: 320,
+      invincible: 0
+    };
+
+    function resize() {
+      const rect = stage.getBoundingClientRect();
+      dpr = Math.min(window.devicePixelRatio || 1, 2);
+      width = Math.max(320, Math.floor(rect.width));
+      height = Math.max(520, Math.floor(rect.height));
+      canvas.width = Math.floor(width * dpr);
+      canvas.height = Math.floor(height * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      player.x = clamp(player.x || width / 2, 30, width - 30);
+      player.y = clamp(player.y || height - 78, 80, height - 40);
+      if (stars.length === 0) {
+        for (let i = 0; i < 130; i++) {
+          const layer = Math.random();
+          stars.push({
+            x: Math.random() * width,
+            y: Math.random() * height,
+            r: layer > 0.82 ? Math.random() * 1.9 + 1.1 : Math.random() * 1.2 + 0.35,
+            v: layer > 0.82 ? Math.random() * 68 + 48 : Math.random() * 32 + 14,
+            alpha: Math.random() * 0.5 + 0.42,
+            hue: Math.random() > 0.88 ? "#ffe9a8" : Math.random() > 0.72 ? "#b6fbff" : "#f4fbff",
+            twinkle: Math.random() * Math.PI * 2
+          });
+        }
+      }
+    }
+
+    function startGame() {
+      ensureAudio();
+      const aircraft = getSelectedAircraft();
+      if (isAircraftBroken(aircraft)) {
+        playing = false;
+        awaitingNextMinute = false;
+        headline.textContent = "需要修复";
+        summary.textContent = `${aircraft.name} 耐久用完了，需要 ${repairCost(aircraft)} 战斗积分修复后才能出战。`;
+        restart.textContent = "再玩一次";
+        overlay.classList.add("show");
+        renderHangar();
+        playSound("hurt");
+        return;
+      }
+      consumeAircraftUse(aircraft);
+      playSound("start");
+      totalScore = 0;
+      challengeMinute = 1;
+      lives = aircraft.maxLives;
+      awaitingNextMinute = false;
+      startMinute(false);
+    }
+
+    function startMinute(keepPlayer) {
+      score = 0;
+      elapsedTime = 0;
+      minuteTarget = getMinuteTarget();
+      playing = true;
+      lastTime = performance.now();
+      nextEnemyId = 1;
+      enemyTimer = 0;
+      bossTimer = 15;
+      finalBossSpawned = false;
+      meteorTimer = new URLSearchParams(location.search).has("testMeteor") ? 1 : 5;
+      meteorStormTimer = new URLSearchParams(location.search).has("testMeteor") ? 7 : 22;
+      meteorStormArmed = false;
+      meteorAlert = 0;
+      shotCooldown = 0;
+      ufoBurstCooldown = 1.1;
+      rocketMissileCooldown = 0.8;
+      rocketDroneCooldown = 2.4;
+      powerTimer = 4;
+      powerupsSpawned = 0;
+      splitterTimer = 3;
+      splittersSpawned = 0;
+      rapidFire = 0;
+      shield = 0;
+      heavyFire = 0;
+      bullets.length = 0;
+      enemyBullets.length = 0;
+      enemies.length = 0;
+      bursts.length = 0;
+      powerups.length = 0;
+      splitters.length = 0;
+      meteors.length = 0;
+      friendlyDrones.length = 0;
+      player.speed = getSelectedAircraft().speed;
+      player.x = width / 2;
+      player.y = height - 78;
+      player.invincible = 1.2;
+      if (keepPlayer) lives = Math.min(getSelectedAircraft().maxLives, lives + 1);
+      overlay.classList.remove("show");
+      updateHud();
+    }
+
+    function updateHud() {
+      scoreEl.textContent = `${score}/${minuteTarget}`;
+      timeEl.textContent = String(Math.max(0, Math.ceil(60 - elapsedTime)));
+      livesEl.textContent = Number.isInteger(lives) ? String(lives) : lives.toFixed(1);
+    }
+
+    function getMinuteTarget() {
+      if (new URLSearchParams(location.search).has("testChallenge")) return 500 + (challengeMinute - 1) * 200;
+      return 2000 + (challengeMinute - 1) * 500;
+    }
+
+    function getSelectedAircraft() {
+      return aircrafts.find(aircraft => aircraft.id === selectedAircraftId) || aircrafts[0];
+    }
+
+    function renderHangar() {
+      hangar.innerHTML = `
+        <div class="hangar-head">
+          <span>机库</span>
+          <span>战斗积分：${battlePoints}</span>
+        </div>
+        ${aircrafts.map(aircraft => {
+          const owned = ownedAircrafts.includes(aircraft.id);
+          const selected = aircraft.id === selectedAircraftId;
+          const broken = owned && isAircraftBroken(aircraft);
+          const usesText = hasInfiniteDurability(aircraft) ? "无限耐久" : `剩余 ${getAircraftUses(aircraft)}/${aircraft.durability} 局`;
+          const action = !owned ? `${aircraft.cost} 购买` : broken ? `${repairCost(aircraft)} 修复` : selected ? "已选择" : "选择";
+          return `
+            <div class="plane-card ${selected ? "selected" : ""}">
+              <div>
+                <div class="plane-name">${aircraft.name}</div>
+                <div class="plane-stats">生命 ${aircraft.maxLives} · 攻击 ${aircraft.attack}x · 速度 ${aircraft.speed}<br>${aircraft.desc} · ${usesText}</div>
+              </div>
+              <button type="button" data-aircraft="${aircraft.id}" ${selected && !broken ? "disabled" : ""}>${action}</button>
+            </div>
+          `;
+        }).join("")}
+      `;
+    }
+
+    function handleHangarClick(event) {
+      const button = event.target.closest("[data-aircraft]");
+      if (!button) return;
+      const aircraft = aircrafts.find(item => item.id === button.dataset.aircraft);
+      if (!aircraft) return;
+      if (!ownedAircrafts.includes(aircraft.id)) {
+        if (battlePoints < aircraft.cost) {
+          summary.textContent = `战斗积分不够，还差 ${aircraft.cost - battlePoints}。继续挑战就能攒积分。`;
+          playSound("hurt");
+          return;
+        }
+        battlePoints -= aircraft.cost;
+        ownedAircrafts.push(aircraft.id);
+        if (!hasInfiniteDurability(aircraft)) aircraftUses[aircraft.id] = aircraft.durability;
+        saveHangar();
+        playSound("power");
+      }
+      if (isAircraftBroken(aircraft)) {
+        const cost = repairCost(aircraft);
+        if (battlePoints < cost) {
+          summary.textContent = `修复积分不够，还差 ${cost - battlePoints}。先用歼15继续攒积分。`;
+          playSound("hurt");
+          return;
+        }
+        battlePoints -= cost;
+        aircraftUses[aircraft.id] = aircraft.durability;
+        saveHangar();
+        renderHangar();
+        summary.textContent = `${aircraft.name} 已修复，可以再出战 ${aircraft.durability} 局。`;
+        playSound("power");
+        return;
+      }
+      selectedAircraftId = aircraft.id;
+      saveHangar();
+      renderHangar();
+      summary.textContent = `已选择 ${aircraft.name}：${aircraft.desc}。`;
+    }
+
+    function awardBattlePoints(amount) {
+      const earned = Math.max(0, amount);
+      battlePoints += earned;
+      saveHangar();
+      return earned;
+    }
+
+    function saveHangar() {
+      try {
+        localStorage.setItem("oneMinuteShooterBattlePoints", String(battlePoints));
+        localStorage.setItem("oneMinuteShooterOwnedAircrafts", JSON.stringify(ownedAircrafts));
+        localStorage.setItem("oneMinuteShooterAircraftUses", JSON.stringify(aircraftUses));
+        localStorage.setItem("oneMinuteShooterSelectedAircraft", selectedAircraftId);
+      } catch (error) {}
+    }
+
+    function isAircraftBroken(aircraft) {
+      return !hasInfiniteDurability(aircraft) && getAircraftUses(aircraft) <= 0;
+    }
+
+    function repairCost(aircraft) {
+      return Math.max(100, Math.round(aircraft.cost * 0.4));
+    }
+
+    function consumeAircraftUse(aircraft) {
+      if (hasInfiniteDurability(aircraft)) return;
+      aircraftUses[aircraft.id] = Math.max(0, getAircraftUses(aircraft) - 1);
+      saveHangar();
+      renderHangar();
+    }
+
+    function hasInfiniteDurability(aircraft) {
+      return aircraft.durability === Infinity;
+    }
+
+    function getAircraftUses(aircraft) {
+      return Math.min(aircraft.durability, Number.isFinite(Number(aircraftUses[aircraft.id])) ? Number(aircraftUses[aircraft.id]) : aircraft.durability);
+    }
+
+    function grantStarterBattlePoints() {
+      try {
+        if (localStorage.getItem("oneMinuteShooterStarterGrant") === "1") return;
+        if (ownedAircrafts.length === 1 && ownedAircrafts[0] === "j15" && battlePoints < 200) {
+          battlePoints = 200;
+          saveHangar();
+        }
+        localStorage.setItem("oneMinuteShooterStarterGrant", "1");
+      } catch (error) {}
+    }
+
+    function resetOwnedAircraftsForPurchase() {
+      try {
+        if (localStorage.getItem("oneMinuteShooterPurchaseResetV1") === "1") return;
+        ownedAircrafts = ["j15"];
+        aircraftUses = {};
+        selectedAircraftId = "j15";
+        localStorage.setItem("oneMinuteShooterPurchaseResetV1", "1");
+        saveHangar();
+      } catch (error) {
+        ownedAircrafts = ["j15"];
+        aircraftUses = {};
+        selectedAircraftId = "j15";
+      }
+    }
+
+    function resetBattlePointsOnce() {
+      try {
+        if (localStorage.getItem("oneMinuteShooterBattlePointsResetV1") === "1") return;
+        battlePoints = 0;
+        localStorage.setItem("oneMinuteShooterStarterGrant", "1");
+        localStorage.setItem("oneMinuteShooterBattlePointsResetV1", "1");
+        saveHangar();
+      } catch (error) {
+        battlePoints = 0;
+      }
+    }
+
+    function loadNumber(key, fallback) {
+      try {
+        const value = Number(localStorage.getItem(key));
+        return Number.isFinite(value) ? value : fallback;
+      } catch (error) {
+        return fallback;
+      }
+    }
+
+    function loadOwnedAircrafts() {
+      try {
+        const saved = JSON.parse(localStorage.getItem("oneMinuteShooterOwnedAircrafts") || "[]");
+        return Array.from(new Set(["j15", ...(Array.isArray(saved) ? saved : [])]));
+      } catch (error) {
+        return ["j15"];
+      }
+    }
+
+    function loadSelectedAircraft() {
+      try {
+        const saved = localStorage.getItem("oneMinuteShooterSelectedAircraft") || "j15";
+        return loadOwnedAircrafts().includes(saved) ? saved : "j15";
+      } catch (error) {
+        return "j15";
+      }
+    }
+
+    function loadAircraftUses() {
+      try {
+        const saved = JSON.parse(localStorage.getItem("oneMinuteShooterAircraftUses") || "{}");
+        const uses = saved && typeof saved === "object" ? saved : {};
+        for (const aircraft of aircrafts) {
+          if (!hasInfiniteDurability(aircraft) && ownedAircrafts.includes(aircraft.id)) {
+            uses[aircraft.id] = Number.isFinite(Number(uses[aircraft.id])) ? Math.min(aircraft.durability, Number(uses[aircraft.id])) : aircraft.durability;
+          }
+        }
+        return uses;
+      } catch (error) {
+        return {};
+      }
+    }
+
+    function continueNextMinute() {
+      ensureAudio();
+      playSound("start");
+      awaitingNextMinute = false;
+      challengeMinute += 1;
+      startMinute(true);
+    }
+
+    function finishMinute() {
+      playing = false;
+      awaitingNextMinute = true;
+      totalScore += score;
+      const earned = awardBattlePoints(Math.max(5, Math.floor(score / 40)));
+      headline.textContent = `第 ${challengeMinute} 分钟通关`;
+      summary.textContent = `本分钟 ${score} 分，总分 ${totalScore}。获得 ${earned} 战斗积分，奖励 1 条生命，继续下一分钟！`;
+      restart.textContent = "下一分钟";
+      overlay.classList.add("show");
+      renderHangar();
+      playSound("win");
+      updateHud();
+    }
+
+    function endGame(title) {
+      playing = false;
+      awaitingNextMinute = false;
+      const earned = awardBattlePoints(Math.floor(score / 70));
+      headline.textContent = title;
+      summary.textContent = `坚持到第 ${challengeMinute} 分钟，本分钟 ${score}/${minuteTarget}，总分 ${totalScore + score}。获得 ${earned} 战斗积分，再来一局冲更远。`;
+      restart.textContent = "再玩一次";
+      overlay.classList.add("show");
+      renderHangar();
+      playSound(title === "挑战成功" ? "win" : "lose");
+      updateHud();
+    }
+
+    function loop(now) {
+      const dt = Math.min((now - lastTime) / 1000 || 0, 0.033);
+      lastTime = now;
+      update(dt);
+      draw();
+      requestAnimationFrame(loop);
+    }
+
+    function update(dt) {
+      moveStars(dt);
+      if (!playing) return;
+
+      elapsedTime += dt;
+      shotCooldown = Math.max(0, shotCooldown - dt);
+      rapidFire = Math.max(0, rapidFire - dt);
+      shield = Math.max(0, shield - dt);
+      heavyFire = Math.max(0, heavyFire - dt);
+      ufoBurstCooldown = Math.max(0, ufoBurstCooldown - dt);
+      rocketMissileCooldown = Math.max(0, rocketMissileCooldown - dt);
+      rocketDroneCooldown = Math.max(0, rocketDroneCooldown - dt);
+      player.invincible = Math.max(0, player.invincible - dt);
+      enemyTimer -= dt;
+      bossTimer -= dt;
+      meteorTimer -= dt;
+      meteorStormTimer -= dt;
+      meteorAlert = Math.max(0, meteorAlert - dt);
+      powerTimer -= dt;
+      splitterTimer -= dt;
+
+      movePlayer(dt);
+      shoot();
+      if (enemyTimer <= 0) spawnEnemy();
+      if (bossTimer <= 0) spawnBoss();
+      if (meteorTimer <= 0) spawnMeteor();
+      if (meteorStormTimer <= 2.2 && !meteorStormArmed) {
+        meteorStormArmed = true;
+        meteorAlert = 2.2;
+        playSound("warning");
+      }
+      if (meteorStormTimer <= 0) spawnMeteorStorm();
+      const finalBossScore = new URLSearchParams(location.search).has("testFinalBoss") ? 120 : Math.floor(minuteTarget * 0.75);
+      if (!finalBossSpawned && score >= finalBossScore) spawnFinalBoss();
+      if (powerTimer <= 0) spawnPowerup();
+      if (splitterTimer <= 0) spawnSplitter();
+
+      updateBullets(dt);
+      updateEnemyBullets(dt);
+      updateMeteors(dt);
+      updateEnemies(dt);
+      updatePowerups(dt);
+      updateSplitters(dt);
+      updateFriendlyDrones(dt);
+      updateBursts(dt);
+      handleCollisions();
+      if (!playing) {
+        updateHud();
+        return;
+      }
+
+      if (score >= minuteTarget) finishMinute();
+      else if (elapsedTime >= 60) endGame("时间到");
+      updateHud();
+    }
+
+    function moveStars(dt) {
+      for (const star of stars) {
+        star.y += star.v * dt;
+        star.twinkle += dt * 2;
+        if (star.y > height + 4) {
+          star.x = Math.random() * width;
+          star.y = -4;
+          star.v = Math.random() * 54 + 18;
+        }
+      }
+    }
+
+    function movePlayer(dt) {
+      let dx = 0;
+      let dy = 0;
+      if (keys.has("ArrowLeft") || keys.has("a") || keys.has("A")) dx -= 1;
+      if (keys.has("ArrowRight") || keys.has("d") || keys.has("D")) dx += 1;
+      if (keys.has("ArrowUp") || keys.has("w") || keys.has("W")) dy -= 1;
+      if (keys.has("ArrowDown") || keys.has("s") || keys.has("S")) dy += 1;
+      const length = Math.hypot(dx, dy) || 1;
+      player.x = clamp(player.x + (dx / length) * player.speed * dt, 24, width - 24);
+      player.y = clamp(player.y + (dy / length) * player.speed * dt, 86, height - 36);
+    }
+
+    function shoot() {
+      if (!playing) return;
+      if (getSelectedAircraft().id === "ufo" && ufoBurstCooldown <= 0) {
+        fireUfoBurst();
+        ufoBurstCooldown = rapidFire > 0 ? 1.05 : 1.55;
+      }
+      if (getSelectedAircraft().id === "rocket" && rocketMissileCooldown <= 0) {
+        fireRocketMissile();
+        rocketMissileCooldown = rapidFire > 0 ? 1.25 : 2.05;
+      }
+      if (getSelectedAircraft().id === "rocket" && rocketDroneCooldown <= 0) {
+        launchRocketDrones();
+        rocketDroneCooldown = rapidFire > 0 ? 6.2 : 8.4;
+      }
+      const delay = rapidFire > 0 ? 0.11 : 0.22;
+      if (shotCooldown > 0) return;
+      shotCooldown = delay;
+      bullets.push(makeBullet(player.x, player.y - 22, 0, -520, 0));
+      if (rapidFire > 0) {
+        bullets.push(makeBullet(player.x - 12, player.y - 16, -50, -500, 0, true));
+        bullets.push(makeBullet(player.x + 12, player.y - 16, 50, -500, 0, true));
+      }
+      const now = performance.now();
+      if (now - lastShotSound > 70) {
+        playSound(heavyFire > 0 ? "heavyShot" : "shot");
+        lastShotSound = now;
+      }
+    }
+
+    function fireUfoBurst() {
+      const attack = getSelectedAircraft().attack;
+      const speed = 360;
+      for (let i = 0; i < 8; i++) {
+        const angle = (Math.PI * 2 * i) / 8;
+        bullets.push({
+          x: player.x + Math.cos(angle) * 10,
+          y: player.y + Math.sin(angle) * 10,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed,
+          r: 3.5,
+          split: 0,
+          damage: 0.8 * attack,
+          pierce: 0,
+          color: "#65ffa8",
+          hitIds: []
+        });
+      }
+      pulse(player.x, player.y, "#65ffa8", 28);
+      playSound("split");
+    }
+
+    function fireRocketMissile() {
+      const attack = getSelectedAircraft().attack;
+      bullets.push({
+        x: player.x,
+        y: player.y - 30,
+        vx: 0,
+        vy: -340,
+        r: 7,
+        split: 0,
+        damage: 5 * attack,
+        pierce: 0,
+        color: "#ff5c7a",
+        kind: "missile",
+        turnRate: 7.2,
+        speed: 440,
+        trail: 0,
+        hitIds: []
+      });
+      pulse(player.x, player.y - 28, "#ff5c7a", 16);
+      playSound("heavyShot");
+    }
+
+    function launchRocketDrones() {
+      const count = 3;
+      for (let i = 0; i < count; i++) {
+        const angle = -Math.PI / 2 + (i - 1) * 0.62;
+        friendlyDrones.push({
+          x: player.x,
+          y: player.y - 18,
+          vx: Math.cos(angle) * 260,
+          vy: Math.sin(angle) * 260,
+          r: 9,
+          age: 0,
+          life: 5,
+          shootCooldown: 0.28 + i * 0.12,
+          spin: angle
+        });
+      }
+      pulse(player.x, player.y - 18, "#ff9f45", 22);
+      playSound("power");
+    }
+
+    function makeBullet(x, y, vx, vy, split, sideShot = false) {
+      const heavy = heavyFire > 0;
+      const attack = getSelectedAircraft().attack;
+      return {
+        x,
+        y,
+        vx,
+        vy,
+        r: heavy ? (sideShot ? 5 : 7) : (sideShot ? 3 : 4),
+        split,
+        damage: (heavy ? (sideShot ? 3 : 4) : 1) * attack,
+        pierce: heavy ? (sideShot ? 2 : 3) : 0,
+        color: heavy ? "#ff7a3d" : "#ffe066",
+        hitIds: []
+      };
+    }
+
+    function spawnEnemy() {
+      const lateGame = 1 + elapsedTime / 80 + (challengeMinute - 1) * 0.16;
+      const roll = Math.random();
+      const type = roll > 0.90 ? "fighter" : roll > 0.64 ? "saucer" : "rock";
+      const r = type === "fighter" ? 20 : type === "saucer" ? 18 : Math.random() * 12 + 14;
+      const speed = (type === "fighter" ? 68 : type === "saucer" ? 78 : 92) * lateGame + Math.random() * 35;
+      enemies.push({
+        id: nextEnemyId++,
+        type,
+        x: r + Math.random() * (width - r * 2),
+        y: -r - 10,
+        r,
+        vx: type === "fighter" ? (Math.random() - 0.5) * 115 : type === "saucer" ? (Math.random() - 0.5) * 90 : (Math.random() - 0.5) * 35,
+        vy: speed,
+        spin: Math.random() * Math.PI,
+        hp: type === "fighter" ? 3 : type === "saucer" ? 2 : 1,
+        fireCooldown: type === "fighter" ? 0.7 + Math.random() * 0.9 : 999
+      });
+      enemyTimer = Math.max(0.28, 0.86 - elapsedTime / 150);
+    }
+
+    function spawnBoss() {
+      const r = 46;
+      const hp = 18 + Math.floor(elapsedTime / 15) * 4 + (challengeMinute - 1) * 5;
+      const targetY = 228 + Math.random() * 34;
+      enemies.push({
+        id: nextEnemyId++,
+        type: "boss",
+        x: r + Math.random() * (width - r * 2),
+        y: targetY,
+        r,
+        vx: Math.random() > 0.5 ? 74 : -74,
+        vy: 0,
+        spin: 0,
+        hp,
+        maxHp: hp,
+        targetY
+      });
+      bossTimer = 15;
+      pulse(width / 2, 96, "#ff5c7a", 34);
+      playSound("boss");
+    }
+
+    function spawnFinalBoss() {
+      finalBossSpawned = true;
+      const r = 70;
+      const hp = 60;
+      enemies.push({
+        id: nextEnemyId++,
+        type: "finalBoss",
+        x: width / 2,
+        y: 164,
+        r,
+        vx: 58,
+        vy: 0,
+        spin: 0,
+        hp,
+        maxHp: hp,
+        targetY: 164
+      });
+      bossTimer = 999;
+      pulse(width / 2, 164, "#ffcc33", 76);
+      pulse(width / 2, 164, "#ff5c7a", 58);
+      playSound("finalBoss");
+    }
+
+    function spawnPowerup() {
+      const kinds = ["rapid", "shield", "heavy", "bomb", "heart"];
+      const kind = powerupsSpawned === 0 ? "heavy" : powerupsSpawned === 1 ? "bomb" : powerupsSpawned === 2 ? "heart" : kinds[Math.floor(Math.random() * kinds.length)];
+      const nearPlayer = powerupsSpawned < 3;
+      powerups.push({
+        x: nearPlayer ? clamp(player.x, 28, width - 28) : 28 + Math.random() * (width - 56),
+        y: -20,
+        r: 13,
+        kind,
+        vy: 120
+      });
+      powerupsSpawned += 1;
+      powerTimer = 9 + Math.random() * 7;
+    }
+
+    function spawnSplitter() {
+      const nearPlayer = splittersSpawned === 0;
+      splitters.push({
+        x: nearPlayer ? clamp(player.x, 36, width - 36) : 36 + Math.random() * (width - 72),
+        y: -24,
+        r: 15,
+        vx: (Math.random() - 0.5) * 42,
+        vy: 82 + Math.random() * 34,
+        spin: Math.random() * Math.PI
+      });
+      splittersSpawned += 1;
+      splitterTimer = 5 + Math.random() * 4;
+    }
+
+    function spawnMeteor(kindOverride = "", inStorm = false) {
+      const fromLeft = Math.random() > 0.5;
+      const roll = Math.random();
+      const kind = kindOverride || (roll > 0.76 ? "large" : roll > 0.38 ? "medium" : "small");
+      const r = kind === "large" ? 30 + Math.random() * 10 : kind === "medium" ? 18 + Math.random() * 7 : 10 + Math.random() * 5;
+      const speed = kind === "large" ? 190 + Math.random() * 46 : kind === "medium" ? 255 + Math.random() * 65 : 340 + Math.random() * 95;
+      meteors.push({
+        x: fromLeft ? -r - 18 - Math.random() * 180 : width + r + 18 + Math.random() * 180,
+        y: 72 + Math.random() * Math.max(80, height * 0.36),
+        vx: (fromLeft ? 1 : -1) * speed,
+        vy: kind === "large" ? 168 + Math.random() * 58 : kind === "medium" ? 210 + Math.random() * 84 : 260 + Math.random() * 105,
+        r,
+        kind,
+        spin: Math.random() * Math.PI,
+        spinRate: kind === "large" ? 2.2 : kind === "medium" ? 3.4 : 5.4,
+        hitPlayer: false
+      });
+      if (!inStorm) meteorTimer = 7 + Math.random() * 5;
+    }
+
+    function spawnMeteorStorm() {
+      const count = 3 + Math.floor(Math.random() * 3);
+      const kinds = ["small", "small", "medium", "medium", "large"];
+      for (let i = 0; i < count; i++) {
+        spawnMeteor(kinds[Math.floor(Math.random() * kinds.length)], true);
+      }
+      meteorStormTimer = 18 + Math.random() * 10;
+      meteorStormArmed = false;
+      meteorAlert = 0.8;
+      meteorTimer = Math.max(meteorTimer, 4);
+      playSound("meteor");
+    }
+
+    function updateBullets(dt) {
+      for (let i = bullets.length - 1; i >= 0; i--) {
+        const b = bullets[i];
+        if (b.kind === "missile") updateMissile(b, dt);
+        b.x += b.vx * dt;
+        b.y += b.vy * dt;
+        if (b.trail !== undefined) {
+          b.trail -= dt;
+          if (b.trail <= 0) {
+            b.trail = 0.055;
+            pulse(b.x, b.y, "#ff9f45", 5);
+          }
+        }
+        if (b.y < -40 || b.y > height + 40 || b.x < -40 || b.x > width + 40) bullets.splice(i, 1);
+      }
+    }
+
+    function updateMissile(missile, dt) {
+      const target = findNearestEnemy(missile);
+      if (!target) return;
+      const desired = Math.atan2(target.y - missile.y, target.x - missile.x);
+      const current = Math.atan2(missile.vy, missile.vx);
+      let diff = desired - current;
+      while (diff > Math.PI) diff -= Math.PI * 2;
+      while (diff < -Math.PI) diff += Math.PI * 2;
+      const nextAngle = current + clamp(diff, -missile.turnRate * dt, missile.turnRate * dt);
+      missile.vx = Math.cos(nextAngle) * missile.speed;
+      missile.vy = Math.sin(nextAngle) * missile.speed;
+    }
+
+    function findNearestEnemy(from) {
+      let best = null;
+      let bestDistance = Infinity;
+      for (const enemy of enemies) {
+        const d = distance(from, enemy);
+        if (d < bestDistance) {
+          bestDistance = d;
+          best = enemy;
+        }
+      }
+      return best;
+    }
+
+    function updateFriendlyDrones(dt) {
+      const attack = getSelectedAircraft().attack;
+      for (let i = friendlyDrones.length - 1; i >= 0; i--) {
+        const drone = friendlyDrones[i];
+        drone.age += dt;
+        drone.shootCooldown -= dt;
+        const returning = drone.age >= drone.life;
+        const target = returning ? player : findNearestEnemy(drone);
+        if (target) {
+          const dx = target.x - drone.x;
+          const dy = target.y - drone.y;
+          const angle = Math.atan2(dy, dx);
+          const speed = returning ? 390 : 245;
+          drone.vx += Math.cos(angle) * speed * dt * 3.2;
+          drone.vy += Math.sin(angle) * speed * dt * 3.2;
+          const limit = returning ? 430 : 280;
+          const current = Math.hypot(drone.vx, drone.vy) || 1;
+          if (current > limit) {
+            drone.vx = (drone.vx / current) * limit;
+            drone.vy = (drone.vy / current) * limit;
+          }
+          drone.spin = angle + Math.PI / 2;
+        }
+        drone.x += drone.vx * dt;
+        drone.y += drone.vy * dt;
+        drone.x = clamp(drone.x, 14, width - 14);
+        drone.y = clamp(drone.y, 72, height - 28);
+        if (!returning && drone.shootCooldown <= 0) {
+          const enemy = findNearestEnemy(drone);
+          if (enemy) {
+            const angle = Math.atan2(enemy.y - drone.y, enemy.x - drone.x);
+            bullets.push({
+              x: drone.x,
+              y: drone.y,
+              vx: Math.cos(angle) * 470,
+              vy: Math.sin(angle) * 470,
+              r: 3,
+              split: 0,
+              damage: 0.65 * attack,
+              pierce: 0,
+              color: "#ffcc66",
+              hitIds: []
+            });
+          }
+          drone.shootCooldown = 0.42;
+        }
+        if (returning && distance(drone, player) < 24) {
+          pulse(drone.x, drone.y, "#ff9f45", 10);
+          friendlyDrones.splice(i, 1);
+        }
+      }
+    }
+
+    function updateEnemyBullets(dt) {
+      for (let i = enemyBullets.length - 1; i >= 0; i--) {
+        const b = enemyBullets[i];
+        b.x += b.vx * dt;
+        b.y += b.vy * dt;
+        b.spin += dt * 8;
+        if (b.y > height + 30 || b.x < -30 || b.x > width + 30) enemyBullets.splice(i, 1);
+      }
+    }
+
+    function updateEnemies(dt) {
+      for (let i = enemies.length - 1; i >= 0; i--) {
+        const e = enemies[i];
+        e.x += e.vx * dt;
+        e.y += e.vy * dt;
+        e.spin += e.type === "finalBoss" ? dt * 0.35 : e.type === "boss" ? dt * 0.7 : dt * 3;
+        if (e.type === "fighter") {
+          e.fireCooldown -= dt;
+          if (e.fireCooldown <= 0 && e.y > 60 && e.y < height * 0.72) {
+            enemyShoot(e);
+            e.fireCooldown = Math.max(0.62, 1.35 - challengeMinute * 0.08) + Math.random() * 0.55;
+          }
+        }
+        if ((e.type === "boss" || e.type === "finalBoss") && e.y >= e.targetY) {
+          e.y = e.targetY;
+          e.vy = 0;
+        }
+        if (e.x < e.r || e.x > width - e.r) e.vx *= -1;
+        if (e.y > height + e.r) {
+          enemies.splice(i, 1);
+        }
+      }
+    }
+
+    function enemyShoot(e) {
+      const aimX = clamp((player.x - e.x) * 0.9, -145, 145);
+      enemyBullets.push({
+        x: e.x,
+        y: e.y + e.r * 0.65,
+        vx: aimX,
+        vy: 255 + challengeMinute * 18,
+        r: 5,
+        spin: 0
+      });
+      playSound("enemyShot");
+    }
+
+    function updateMeteors(dt) {
+      for (let i = meteors.length - 1; i >= 0; i--) {
+        const m = meteors[i];
+        m.x += m.vx * dt;
+        m.y += m.vy * dt;
+        m.spin += dt * (m.spinRate || 4.2);
+        if (m.y > height + m.r + 60 || m.x < -m.r - 90 || m.x > width + m.r + 90) {
+          meteors.splice(i, 1);
+        }
+      }
+    }
+
+    function updatePowerups(dt) {
+      for (let i = powerups.length - 1; i >= 0; i--) {
+        const p = powerups[i];
+        p.y += p.vy * dt;
+        if (p.y > height + 20) powerups.splice(i, 1);
+      }
+    }
+
+    function updateSplitters(dt) {
+      for (let i = splitters.length - 1; i >= 0; i--) {
+        const s = splitters[i];
+        s.x += s.vx * dt;
+        s.y += s.vy * dt;
+        s.spin += dt * 2.4;
+        if (s.x < s.r || s.x > width - s.r) s.vx *= -1;
+        if (s.y > height + 24) splitters.splice(i, 1);
+      }
+    }
+
+    function updateBursts(dt) {
+      for (let i = bursts.length - 1; i >= 0; i--) {
+        const burst = bursts[i];
+        burst.life -= dt;
+        burst.r += burst.grow * dt;
+        if (burst.sparks) {
+          for (const spark of burst.sparks) {
+            spark.x += spark.vx * dt;
+            spark.y += spark.vy * dt;
+            spark.vx *= 0.985;
+            spark.vy *= 0.985;
+            spark.life -= dt;
+          }
+        }
+        if (burst.life <= 0) bursts.splice(i, 1);
+      }
+    }
+
+    function handleCollisions() {
+      handleMeteorCollisions();
+      handleBulletClashes();
+      handleEnemyBulletCollisions();
+
+      for (let i = splitters.length - 1; i >= 0; i--) {
+        const s = splitters[i];
+        for (let j = bullets.length - 1; j >= 0; j--) {
+          const b = bullets[j];
+          if (distance(s, b) < s.r + b.r) {
+            splitters.splice(i, 1);
+            bullets.splice(j, 1);
+            splitBullet(b, s);
+            score += 5;
+            pulse(s.x, s.y, "#7df9ff", 28);
+            playSound("split");
+            break;
+          }
+        }
+      }
+
+      for (let i = enemies.length - 1; i >= 0; i--) {
+        const e = enemies[i];
+        for (let j = bullets.length - 1; j >= 0; j--) {
+          const b = bullets[j];
+          if (b.hitIds && b.hitIds.includes(e.id)) continue;
+          if (distance(e, b) < e.r + b.r) {
+            if (b.hitIds) b.hitIds.push(e.id);
+            e.hp -= b.damage || 1;
+            pulse(b.x, b.y, b.color || "#ffe066", b.damage > 1 ? 12 : 6);
+            if ((b.pierce || 0) > 0) {
+              b.pierce -= 1;
+              b.r = Math.max(3, b.r * 0.92);
+            } else {
+              bullets.splice(j, 1);
+            }
+            if (e.hp <= 0) {
+              enemies.splice(i, 1);
+              defeatEnemy(e);
+              pulse(e.x, e.y, e.type === "finalBoss" ? "#ffcc33" : e.type === "boss" ? "#ff5c7a" : e.type === "fighter" ? "#7df9ff" : e.type === "saucer" ? "#35d0ff" : "#ffb86b", e.type === "finalBoss" ? 78 : e.type === "boss" ? 44 : e.type === "fighter" ? 26 : 20);
+              playSound(e.type === "finalBoss" || e.type === "boss" ? "bigBoom" : "boom");
+            } else {
+              playSound("hit");
+            }
+            break;
+          }
+        }
+      }
+
+      for (let i = enemies.length - 1; i >= 0; i--) {
+        const e = enemies[i];
+        if (distance(e, player) < e.r + player.r && player.invincible <= 0) {
+          pulse(e.x, e.y, "#ff5c7a", 24);
+          if (e.type !== "boss" && e.type !== "finalBoss") enemies.splice(i, 1);
+          if (shield > 0) {
+            shield = 0;
+            player.invincible = 0.8;
+            score += 5;
+            playSound("shield");
+          } else {
+            lives -= 1;
+            player.invincible = 1.2;
+            playSound("hurt");
+            if (lives <= 0) endGame("飞船退场");
+          }
+        }
+      }
+
+      for (let i = powerups.length - 1; i >= 0; i--) {
+        const p = powerups[i];
+        if (distance(p, player) < p.r + player.r) {
+          powerups.splice(i, 1);
+          if (p.kind === "rapid") rapidFire = 6;
+          if (p.kind === "shield") shield = 8;
+          if (p.kind === "heavy") heavyFire = 7;
+          if (p.kind === "bomb") triggerBomb(p.x, p.y);
+          if (p.kind === "heart") lives = Math.min(getSelectedAircraft().maxLives, lives + 1);
+          score += 10;
+          pulse(p.x, p.y, powerupColor(p.kind), 22);
+          if (p.kind !== "bomb") playSound(p.kind === "heart" ? "heart" : "power");
+        }
+      }
+    }
+
+    function handleBulletClashes() {
+      for (let i = enemyBullets.length - 1; i >= 0; i--) {
+        const enemyBullet = enemyBullets[i];
+        for (let j = bullets.length - 1; j >= 0; j--) {
+          const playerBullet = bullets[j];
+          if (distance(enemyBullet, playerBullet) < enemyBullet.r + playerBullet.r + 5) {
+            pulse(enemyBullet.x, enemyBullet.y, "#ffe066", 16);
+            enemyBullets.splice(i, 1);
+            bullets.splice(j, 1);
+            playSound("hit");
+            break;
+          }
+        }
+      }
+    }
+
+    function handleEnemyBulletCollisions() {
+      for (let i = enemyBullets.length - 1; i >= 0; i--) {
+        const b = enemyBullets[i];
+        if (player.invincible <= 0 && distance(b, player) < b.r + player.r) {
+          enemyBullets.splice(i, 1);
+          lives -= 0.5;
+          player.invincible = 0.45;
+          pulse(player.x, player.y, "#ff5c7a", 20);
+          playSound("hurt");
+          if (lives <= 0) endGame("飞船退场");
+        }
+      }
+    }
+
+    function handleMeteorCollisions() {
+      for (let i = meteors.length - 1; i >= 0; i--) {
+        const m = meteors[i];
+
+        for (let j = enemyBullets.length - 1; j >= 0; j--) {
+          if (distance(m, enemyBullets[j]) < m.r + enemyBullets[j].r + 4) {
+            pulse(enemyBullets[j].x, enemyBullets[j].y, "#ff5c7a", 15);
+            enemyBullets.splice(j, 1);
+          }
+        }
+
+        for (let j = bullets.length - 1; j >= 0; j--) {
+          if (distance(m, bullets[j]) < m.r + bullets[j].r + 4) {
+            pulse(bullets[j].x, bullets[j].y, "#ffcc66", 18);
+            bullets.splice(j, 1);
+            playSound("hit");
+          }
+        }
+
+        for (let j = splitters.length - 1; j >= 0; j--) {
+          if (distance(m, splitters[j]) < m.r + splitters[j].r + 4) {
+            pulse(splitters[j].x, splitters[j].y, "#7df9ff", 24);
+            splitters.splice(j, 1);
+          }
+        }
+
+        for (let j = powerups.length - 1; j >= 0; j--) {
+          if (distance(m, powerups[j]) < m.r + powerups[j].r + 4) {
+            pulse(powerups[j].x, powerups[j].y, powerupColor(powerups[j].kind), 24);
+            powerups.splice(j, 1);
+          }
+        }
+
+        for (let j = enemies.length - 1; j >= 0; j--) {
+          const e = enemies[j];
+          if (distance(m, e) < m.r + e.r) {
+            if (e.type === "boss" || e.type === "finalBoss") {
+              e.hp -= Math.ceil(e.maxHp * 0.25);
+              pulse(e.x, e.y, "#ffcc66", e.type === "finalBoss" ? 64 : 42);
+              if (e.hp <= 0) {
+                enemies.splice(j, 1);
+                defeatEnemy(e);
+                playSound("bigBoom");
+              } else {
+                playSound("bigHit");
+              }
+            } else {
+              enemies.splice(j, 1);
+              defeatEnemy(e);
+              pulse(e.x, e.y, "#ffcc66", 28);
+              playSound("boom");
+            }
+          }
+        }
+
+        if (!m.hitPlayer && player.invincible <= 0 && distance(m, player) < m.r + player.r + 2) {
+          m.hitPlayer = true;
+          pulse(player.x, player.y, "#ff7a3d", 34);
+          lives -= 2;
+          player.invincible = 1.35;
+          playSound("hurt");
+          if (lives <= 0) endGame("飞船退场");
+        }
+      }
+    }
+
+    function pulse(x, y, color, grow) {
+      const size = Math.max(10, grow);
+      const sparkCount = Math.min(34, Math.max(10, Math.floor(size / 2.3)));
+      const sparks = [];
+      for (let i = 0; i < sparkCount; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 90 + Math.random() * (140 + size * 3.2);
+        sparks.push({
+          x,
+          y,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed,
+          length: 5 + Math.random() * Math.min(18, size * 0.55),
+          life: 0.22 + Math.random() * 0.28
+        });
+      }
+      bursts.push({
+        x,
+        y,
+        r: 3,
+        life: 0.56,
+        max: 0.56,
+        grow: size * 4.2,
+        color,
+        core: Math.min(26, Math.max(8, size * 0.42)),
+        flash: Math.min(1, 0.24 + size / 120),
+        sparks
+      });
+    }
+
+    function triggerBomb(x, y) {
+      bullets.length = 0;
+      enemyBullets.length = 0;
+      splitters.length = 0;
+      let cleared = 0;
+      for (let i = enemies.length - 1; i >= 0; i--) {
+        const e = enemies[i];
+        if (e.type === "boss" || e.type === "finalBoss") {
+          e.hp -= e.type === "finalBoss" ? 18 : 12;
+          pulse(e.x, e.y, "#d88cff", 42);
+          if (e.hp <= 0) {
+            enemies.splice(i, 1);
+            defeatEnemy(e);
+          }
+        } else {
+          enemies.splice(i, 1);
+          cleared += 1;
+          defeatEnemy(e);
+          pulse(e.x, e.y, "#d88cff", 26);
+        }
+      }
+      score += cleared * 5;
+      bursts.push({ x, y, r: 10, life: 0.78, max: 0.78, grow: Math.max(width, height) * 1.65, color: "#d88cff" });
+      playSound("bomb");
+    }
+
+    function ensureAudio() {
+      if (!AudioContextClass) return;
+      if (!audioCtx) audioCtx = new AudioContextClass();
+      if (audioCtx.state === "suspended") audioCtx.resume();
+    }
+
+    function playSound(kind) {
+      if (!AudioContextClass) return playFallbackSound(kind);
+      ensureAudio();
+      if (!audioCtx) return;
+      const now = audioCtx.currentTime;
+
+      if (kind === "shot") return chirp(760, 1180, 0.045, 0.032, "square");
+      if (kind === "enemyShot") return chirp(520, 360, 0.05, 0.026, "square");
+      if (kind === "heavyShot") return chirp(210, 92, 0.085, 0.075, "sawtooth");
+      if (kind === "hit") return chirp(420, 160, 0.055, 0.035, "triangle");
+      if (kind === "bigHit") return chirp(180, 72, 0.11, 0.06, "sawtooth");
+      if (kind === "boom") return noiseBurst(0.16, 0.13, 520);
+      if (kind === "bigBoom") return noiseBurst(0.28, 0.22, 180);
+      if (kind === "power") return arpeggio([620, 830, 1120], 0.045, 0.055);
+      if (kind === "heart") return arpeggio([520, 780, 1040, 1320], 0.055, 0.06);
+      if (kind === "shield") return chirp(260, 900, 0.18, 0.05, "sine");
+      if (kind === "hurt") return chirp(150, 62, 0.22, 0.12, "sawtooth");
+      if (kind === "bomb") {
+        noiseBurst(0.36, 0.24, 90);
+        return arpeggio([120, 80, 60], 0.07, 0.12);
+      }
+      if (kind === "boss") return arpeggio([180, 130, 92], 0.12, 0.11);
+      if (kind === "finalBoss") {
+        noiseBurst(0.22, 0.18, 120);
+        return arpeggio([260, 190, 130, 85], 0.12, 0.13);
+      }
+      if (kind === "warning") return arpeggio([880, 620, 880, 620], 0.075, 0.08);
+      if (kind === "meteor") return noiseBurst(0.24, 0.16, 260);
+      if (kind === "split") return arpeggio([680, 940, 1260], 0.035, 0.045);
+      if (kind === "start") return arpeggio([440, 660, 880], 0.055, 0.06);
+      if (kind === "win") return arpeggio([520, 660, 880, 1320], 0.11, 0.1);
+      if (kind === "lose") return arpeggio([300, 210, 140], 0.16, 0.14);
+
+      function chirp(from, to, duration, volume, type) {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(from, now);
+        osc.frequency.exponentialRampToValueAtTime(Math.max(20, to), now + duration);
+        gain.gain.setValueAtTime(0.0001, now);
+        gain.gain.exponentialRampToValueAtTime(volume, now + 0.01);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(now);
+        osc.stop(now + duration + 0.02);
+      }
+
+      function arpeggio(notes, step, volume) {
+        notes.forEach((note, index) => {
+          const start = now + index * step;
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = "triangle";
+          osc.frequency.setValueAtTime(note, start);
+          gain.gain.setValueAtTime(0.0001, start);
+          gain.gain.exponentialRampToValueAtTime(volume, start + 0.012);
+          gain.gain.exponentialRampToValueAtTime(0.0001, start + step * 1.4);
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start(start);
+          osc.stop(start + step * 1.6);
+        });
+      }
+
+      function noiseBurst(duration, volume, filterFreq) {
+        const length = Math.max(1, Math.floor(audioCtx.sampleRate * duration));
+        const buffer = audioCtx.createBuffer(1, length, audioCtx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < length; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / length);
+        const source = audioCtx.createBufferSource();
+        const filter = audioCtx.createBiquadFilter();
+        const gain = audioCtx.createGain();
+        source.buffer = buffer;
+        filter.type = "lowpass";
+        filter.frequency.setValueAtTime(filterFreq, now);
+        filter.frequency.exponentialRampToValueAtTime(Math.max(40, filterFreq * 0.45), now + duration);
+        gain.gain.setValueAtTime(volume, now);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+        source.connect(filter);
+        filter.connect(gain);
+        gain.connect(audioCtx.destination);
+        source.start(now);
+        source.stop(now + duration + 0.02);
+      }
+    }
+
+    function playFallbackSound(kind) {
+      const spec = fallbackSpec(kind);
+      if (!spec) return;
+      if (!fallbackSoundCache[kind]) fallbackSoundCache[kind] = makeWav(spec);
+      const audio = new Audio(fallbackSoundCache[kind]);
+      audio.volume = spec.volume;
+      audio.play().catch(() => {});
+    }
+
+    function fallbackSpec(kind) {
+      if (kind === "shot") return { freq: 920, duration: 0.045, volume: 0.16, wave: "square" };
+      if (kind === "enemyShot") return { freq: 420, duration: 0.05, volume: 0.13, wave: "square" };
+      if (kind === "heavyShot") return { freq: 160, duration: 0.09, volume: 0.28, wave: "saw" };
+      if (kind === "hit") return { freq: 260, duration: 0.06, volume: 0.2, wave: "triangle" };
+      if (kind === "bigHit") return { freq: 110, duration: 0.12, volume: 0.24, wave: "saw" };
+      if (kind === "boom" || kind === "bigBoom" || kind === "bomb" || kind === "meteor") return { freq: 90, duration: 0.22, volume: 0.3, wave: "noise" };
+      if (kind === "hurt" || kind === "lose") return { freq: 120, duration: 0.22, volume: 0.24, wave: "saw" };
+      if (kind === "boss" || kind === "finalBoss") return { freq: 140, duration: 0.28, volume: 0.26, wave: "saw" };
+      if (kind === "warning") return { freq: 740, duration: 0.22, volume: 0.22, wave: "square" };
+      if (kind === "heart" || kind === "power" || kind === "split" || kind === "start" || kind === "win" || kind === "shield") return { freq: 760, duration: 0.16, volume: 0.2, wave: "triangle" };
+      return { freq: 440, duration: 0.08, volume: 0.16, wave: "triangle" };
+    }
+
+    function makeWav(spec) {
+      const sampleRate = 8000;
+      const samples = Math.floor(sampleRate * spec.duration);
+      const bytes = [];
+      const pushText = text => {
+        for (let i = 0; i < text.length; i++) bytes.push(text.charCodeAt(i));
+      };
+      const push16 = value => {
+        bytes.push(value & 255, (value >> 8) & 255);
+      };
+      const push32 = value => {
+        bytes.push(value & 255, (value >> 8) & 255, (value >> 16) & 255, (value >> 24) & 255);
+      };
+      pushText("RIFF");
+      push32(36 + samples);
+      pushText("WAVEfmt ");
+      push32(16);
+      push16(1);
+      push16(1);
+      push32(sampleRate);
+      push32(sampleRate);
+      push16(1);
+      push16(8);
+      pushText("data");
+      push32(samples);
+      for (let i = 0; i < samples; i++) {
+        const t = i / sampleRate;
+        const fade = 1 - i / samples;
+        let wave = Math.sin(Math.PI * 2 * spec.freq * t);
+        if (spec.wave === "square") wave = wave > 0 ? 1 : -1;
+        if (spec.wave === "saw") wave = 2 * ((t * spec.freq) % 1) - 1;
+        if (spec.wave === "triangle") wave = 2 * Math.abs(2 * ((t * spec.freq) % 1) - 1) - 1;
+        if (spec.wave === "noise") wave = Math.random() * 2 - 1;
+        bytes.push(Math.max(0, Math.min(255, Math.round(128 + wave * 100 * fade))));
+      }
+      let binary = "";
+      for (const byte of bytes) binary += String.fromCharCode(byte);
+      return "data:audio/wav;base64," + btoa(binary);
+    }
+
+    function enemyScore(e) {
+      if (e.type === "finalBoss") return 600;
+      if (e.type === "boss") return 180;
+      if (e.type === "fighter") return 80;
+      if (e.type === "saucer") return 30;
+      return 15;
+    }
+
+    function defeatEnemy(e) {
+      const value = enemyScore(e);
+      score += value;
+      awardBattlePoints(Math.max(1, Math.floor(value / 40)));
+    }
+
+    function splitBullet(b, s) {
+      const nextSplit = Math.min((b.split || 0) + 1, 2);
+      const fan = [-0.64, -0.32, 0, 0.32, 0.64];
+      for (const angle of fan) {
+        const speed = 520;
+        bullets.push({
+          x: s.x,
+          y: s.y,
+          vx: Math.sin(angle) * speed,
+          vy: -Math.cos(angle) * speed,
+          r: b.damage > 1 ? (nextSplit > 1 ? 4 : 5) : nextSplit > 1 ? 2.5 : 3,
+          split: nextSplit,
+          damage: b.damage > 1 ? Math.max(2, b.damage - 1) : 1,
+          pierce: b.damage > 1 ? Math.max(1, b.pierce || 1) : 0,
+          color: b.damage > 1 ? "#ff9f45" : nextSplit > 1 ? "#b6fbff" : "#7df9ff",
+          hitIds: []
+        });
+      }
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, width, height);
+      drawSpace();
+      drawPowerups();
+      drawSplitters();
+      drawBullets();
+      drawEnemyBullets();
+      drawMeteors();
+      drawEnemies();
+      drawFriendlyDrones();
+      drawPlayer();
+      drawBursts();
+      drawMeteorAlert();
+    }
+
+    function drawSpace() {
+      const bg = ctx.createLinearGradient(0, 0, 0, height);
+      bg.addColorStop(0, "#040917");
+      bg.addColorStop(0.52, "#08192a");
+      bg.addColorStop(1, "#130b23");
+      ctx.fillStyle = bg;
+      ctx.fillRect(0, 0, width, height);
+
+      const nebula = ctx.createLinearGradient(-width * 0.15, height * 0.18, width * 1.1, height * 0.72);
+      nebula.addColorStop(0, "rgba(53, 208, 255, 0)");
+      nebula.addColorStop(0.28, "rgba(53, 208, 255, 0.12)");
+      nebula.addColorStop(0.52, "rgba(216, 140, 255, 0.16)");
+      nebula.addColorStop(0.78, "rgba(255, 122, 61, 0.1)");
+      nebula.addColorStop(1, "rgba(255, 122, 61, 0)");
+      ctx.fillStyle = nebula;
+      ctx.beginPath();
+      ctx.ellipse(width * 0.48, height * 0.42, width * 0.82, height * 0.18, 0.48, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.save();
+      ctx.translate(width - 26, height * 0.2);
+      ctx.rotate(-0.38);
+      const planet = ctx.createRadialGradient(-18, -16, 8, 0, 0, 58);
+      planet.addColorStop(0, "#ffe6a0");
+      planet.addColorStop(0.45, "#ff8d5b");
+      planet.addColorStop(1, "#713a6b");
+      ctx.fillStyle = planet;
+      ctx.beginPath();
+      ctx.arc(0, 0, 54, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = "rgba(246, 251, 255, 0.55)";
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 78, 17, 0, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+
+      for (const star of stars) {
+        ctx.globalAlpha = star.alpha + Math.sin(star.twinkle) * 0.18;
+        ctx.fillStyle = star.hue;
+        ctx.beginPath();
+        ctx.arc(star.x, star.y, star.r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+    }
+
+    function drawPlayer() {
+      ctx.save();
+      ctx.translate(player.x, player.y);
+      if (player.invincible > 0 && Math.floor(player.invincible * 10) % 2 === 0) ctx.globalAlpha = 0.45;
+      if (shield > 0) {
+        ctx.strokeStyle = "rgba(101, 255, 168, 0.8)";
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(0, 0, 27 + Math.sin(performance.now() / 110) * 2, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      if (heavyFire > 0) {
+        ctx.strokeStyle = "rgba(255, 122, 61, 0.8)";
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(0, 0, 33 + Math.sin(performance.now() / 90) * 2, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+
+      const aircraft = getSelectedAircraft();
+      const paintJobs = {
+        armor: ["#eefcf1", "#77b886", "#315845"],
+        storm: ["#fff4a8", "#ff9f45", "#6d3155"],
+        gale: ["#e8ffff", "#35d0ff", "#234f85"],
+        fortress: ["#f4fbff", "#8b97a7", "#343b47"],
+        phoenix: ["#fff1dc", "#ff7a3d", "#7a2637"],
+        phantom: ["#f2e9ff", "#d88cff", "#321b55"],
+        ufo: ["#eafff5", "#65ffa8", "#24595d"],
+        rocket: ["#fff5d8", "#ff5c7a", "#72223a"]
+      };
+      const colors = paintJobs[aircraft.id] || ["#f6fbff", "#9fb3c4", "#4d6577"];
+      const silhouettes = {
+        armor: {
+          body: [[0, -27], [10, -15], [15, 5], [36, 16], [17, 24], [10, 35], [0, 28], [-10, 35], [-17, 24], [-36, 16], [-15, 5], [-10, -15]],
+          tails: [[-20, 23], [-31, 37], [-7, 31], [20, 23], [31, 37], [7, 31]],
+          cockpit: [0, -9, 6.2, 10],
+          core: [-5, 0, 10, 23]
+        },
+        storm: {
+          body: [[0, -36], [8, -20], [10, 2], [31, 18], [11, 18], [5, 32], [0, 24], [-5, 32], [-11, 18], [-31, 18], [-10, 2], [-8, -20]],
+          tails: [[-12, 22], [-22, 34], [-5, 28], [12, 22], [22, 34], [5, 28]],
+          cockpit: [0, -15, 4.2, 10],
+          core: [-3, -3, 6, 22]
+        },
+        gale: {
+          body: [[0, -39], [5, -22], [6, 7], [38, 15], [9, 20], [3, 34], [0, 26], [-3, 34], [-9, 20], [-38, 15], [-6, 7], [-5, -22]],
+          tails: [[-10, 23], [-18, 37], [-3, 29], [10, 23], [18, 37], [3, 29]],
+          cockpit: [0, -17, 3.6, 11],
+          core: [-2.5, -4, 5, 24]
+        },
+        fortress: {
+          body: [[0, -26], [13, -15], [18, 8], [39, 20], [18, 27], [13, 38], [0, 31], [-13, 38], [-18, 27], [-39, 20], [-18, 8], [-13, -15]],
+          tails: [[-22, 25], [-35, 40], [-8, 32], [22, 25], [35, 40], [8, 32]],
+          cockpit: [0, -7, 7, 9],
+          core: [-6, 2, 12, 22]
+        },
+        phoenix: {
+          body: [[0, -33], [9, -18], [9, 1], [34, 10], [23, 23], [9, 21], [0, 33], [-9, 21], [-23, 23], [-34, 10], [-9, 1], [-9, -18]],
+          tails: [[-15, 23], [-30, 36], [-4, 31], [15, 23], [30, 36], [4, 31]],
+          cockpit: [0, -13, 5, 10],
+          core: [-4, -1, 8, 24]
+        },
+        phantom: {
+          body: [[0, -37], [6, -18], [6, 6], [30, 16], [8, 18], [2, 31], [0, 24], [-2, 31], [-8, 18], [-30, 16], [-6, 6], [-6, -18]],
+          tails: [[-9, 22], [-20, 33], [-3, 28], [9, 22], [20, 33], [3, 28]],
+          cockpit: [0, -15, 4, 10],
+          core: [-3, -2, 6, 23]
+        },
+        ufo: {
+          body: [[0, -23], [19, -17], [40, -2], [34, 13], [14, 23], [0, 26], [-14, 23], [-34, 13], [-40, -2], [-19, -17]],
+          tails: [[-24, 14], [-38, 26], [-10, 20], [24, 14], [38, 26], [10, 20]],
+          cockpit: [0, -10, 12, 8],
+          core: [-13, 1, 26, 11]
+        },
+        rocket: {
+          body: [[0, -44], [10, -25], [12, 7], [25, 24], [10, 21], [5, 38], [0, 30], [-5, 38], [-10, 21], [-25, 24], [-12, 7], [-10, -25]],
+          tails: [[-13, 23], [-27, 39], [-5, 32], [13, 23], [27, 39], [5, 32]],
+          cockpit: [0, -22, 5, 11],
+          core: [-4, -5, 8, 31]
+        },
+        j15: {
+          body: [[0, -31], [7, -21], [7, 6], [28, 18], [12, 21], [7, 30], [0, 25], [-7, 30], [-12, 21], [-28, 18], [-7, 6], [-7, -21]],
+          tails: [[-15, 22], [-24, 35], [-7, 28], [15, 22], [24, 35], [7, 28]],
+          cockpit: [0, -13, 4.4, 9],
+          core: [-3, -4, 6, 22]
+        }
+      };
+      const shape = silhouettes[aircraft.id] || silhouettes.j15;
+      const ship = ctx.createLinearGradient(0, -30, 0, 25);
+      ship.addColorStop(0, colors[0]);
+      ship.addColorStop(0.42, colors[1]);
+      ship.addColorStop(1, colors[2]);
+      ctx.strokeStyle = "rgba(236, 248, 255, 0.7)";
+      ctx.lineWidth = 1.5;
+      ctx.fillStyle = ship;
+      ctx.beginPath();
+      shape.body.forEach(([x, y], index) => {
+        if (index === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      });
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.fillStyle = colors[2];
+      ctx.beginPath();
+      ctx.moveTo(shape.tails[0][0], shape.tails[0][1]);
+      ctx.lineTo(shape.tails[1][0], shape.tails[1][1]);
+      ctx.lineTo(shape.tails[2][0], shape.tails[2][1]);
+      ctx.closePath();
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(shape.tails[3][0], shape.tails[3][1]);
+      ctx.lineTo(shape.tails[4][0], shape.tails[4][1]);
+      ctx.lineTo(shape.tails[5][0], shape.tails[5][1]);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.fillStyle = "#88e6ff";
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.78)";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.ellipse(shape.cockpit[0], shape.cockpit[1], shape.cockpit[2], shape.cockpit[3], 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.fillStyle = "#d9e5ec";
+      ctx.beginPath();
+      ctx.roundRect(shape.core[0], shape.core[1], shape.core[2], shape.core[3], 3);
+      ctx.fill();
+
+      ctx.fillStyle = "#ffe066";
+      ctx.beginPath();
+      ctx.moveTo(-7, 30);
+      ctx.lineTo(0, 43 + Math.random() * 5);
+      ctx.lineTo(7, 30);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+    }
+
+    function drawBullets() {
+      for (const b of bullets) {
+        if (b.kind === "missile") {
+          const angle = Math.atan2(b.vy, b.vx) + Math.PI / 2;
+          ctx.save();
+          ctx.translate(b.x, b.y);
+          ctx.rotate(angle);
+          ctx.shadowColor = "#ff5c7a";
+          ctx.shadowBlur = 18;
+          ctx.fillStyle = "#f4fbff";
+          ctx.strokeStyle = "#ff5c7a";
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          ctx.moveTo(0, -14);
+          ctx.lineTo(7, 6);
+          ctx.lineTo(3, 13);
+          ctx.lineTo(-3, 13);
+          ctx.lineTo(-7, 6);
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+          ctx.fillStyle = "#ff5c7a";
+          ctx.beginPath();
+          ctx.moveTo(-5, 12);
+          ctx.lineTo(0, 25 + Math.random() * 7);
+          ctx.lineTo(5, 12);
+          ctx.closePath();
+          ctx.fill();
+          ctx.restore();
+          continue;
+        }
+        ctx.fillStyle = b.color || "#ffe066";
+        ctx.shadowColor = ctx.fillStyle;
+        ctx.shadowBlur = 12;
+        ctx.beginPath();
+        ctx.roundRect(b.x - b.r, b.y - 10, b.r * 2, 16, 4);
+        ctx.fill();
+      }
+      ctx.shadowBlur = 0;
+    }
+
+    function drawFriendlyDrones() {
+      for (const drone of friendlyDrones) {
+        ctx.save();
+        ctx.translate(drone.x, drone.y);
+        ctx.rotate(drone.spin);
+        ctx.shadowColor = "#ff9f45";
+        ctx.shadowBlur = 14;
+        ctx.fillStyle = "#fff5d8";
+        ctx.strokeStyle = "#ff5c7a";
+        ctx.lineWidth = 1.4;
+        ctx.beginPath();
+        ctx.moveTo(0, -11);
+        ctx.lineTo(8, 7);
+        ctx.lineTo(2, 4);
+        ctx.lineTo(0, 12);
+        ctx.lineTo(-2, 4);
+        ctx.lineTo(-8, 7);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = "#ff9f45";
+        ctx.beginPath();
+        ctx.arc(0, -1, 2.8, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+      ctx.shadowBlur = 0;
+    }
+
+    function drawEnemyBullets() {
+      for (const b of enemyBullets) {
+        ctx.save();
+        ctx.translate(b.x, b.y);
+        ctx.rotate(b.spin);
+        ctx.shadowColor = "#ff5c7a";
+        ctx.shadowBlur = 14;
+        ctx.fillStyle = "#ff5c7a";
+        ctx.strokeStyle = "#ffe066";
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(0, -b.r - 4);
+        ctx.lineTo(b.r + 3, 0);
+        ctx.lineTo(0, b.r + 6);
+        ctx.lineTo(-b.r - 3, 0);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        ctx.restore();
+      }
+      ctx.shadowBlur = 0;
+    }
+
+    function drawMeteors() {
+      for (const m of meteors) {
+        const tailLength = m.kind === "large" ? 118 : m.kind === "medium" ? 86 : 64;
+        const angle = Math.atan2(m.vy, m.vx);
+        const tailX = Math.cos(angle + Math.PI) * tailLength;
+        const tailY = Math.sin(angle + Math.PI) * tailLength;
+
+        const tail = ctx.createLinearGradient(m.x, m.y, m.x + tailX, m.y + tailY);
+        tail.addColorStop(0, "rgba(255, 224, 102, 0.92)");
+        tail.addColorStop(0.28, "rgba(255, 122, 61, 0.52)");
+        tail.addColorStop(1, "rgba(255, 122, 61, 0)");
+        ctx.strokeStyle = tail;
+        ctx.lineWidth = m.r * (m.kind === "large" ? 1.05 : m.kind === "medium" ? 0.88 : 0.68);
+        ctx.lineCap = "round";
+        ctx.beginPath();
+        ctx.moveTo(m.x, m.y);
+        ctx.lineTo(m.x + tailX, m.y + tailY);
+        ctx.stroke();
+        ctx.lineCap = "butt";
+
+        ctx.save();
+        ctx.translate(m.x, m.y);
+        ctx.rotate(m.spin);
+        ctx.shadowColor = "#ffcc66";
+        ctx.shadowBlur = m.kind === "large" ? 24 : 16;
+        ctx.fillStyle = m.kind === "large" ? "#aa5638" : m.kind === "medium" ? "#d47a45" : "#f09a5d";
+        ctx.strokeStyle = "#ffe066";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        for (let i = 0; i < 9; i++) {
+          const a = (Math.PI * 2 * i) / 9;
+          const rockR = m.r * (0.76 + Math.sin(i * 1.7 + m.spin) * 0.13);
+          const x = Math.cos(a) * rockR;
+          const y = Math.sin(a) * rockR;
+          if (i === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        ctx.restore();
+      }
+      ctx.shadowBlur = 0;
+    }
+
+    function drawMeteorAlert() {
+      if (meteorAlert <= 0 || !playing) return;
+      ctx.save();
+      ctx.globalAlpha = Math.min(1, meteorAlert);
+      ctx.fillStyle = "rgba(255, 92, 122, 0.16)";
+      ctx.fillRect(0, 86, width, 48);
+      ctx.fillStyle = "#ffe066";
+      ctx.strokeStyle = "rgba(255, 92, 122, 0.72)";
+      ctx.lineWidth = 3;
+      ctx.font = "800 22px Arial, sans-serif";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.strokeText("流星雨来了！", width / 2, 110);
+      ctx.fillText("流星雨来了！", width / 2, 110);
+      ctx.restore();
+    }
+
+    function drawSplitters() {
+      for (const s of splitters) {
+        ctx.save();
+        ctx.translate(s.x, s.y);
+        ctx.rotate(s.spin);
+        ctx.shadowColor = "#7df9ff";
+        ctx.shadowBlur = 18;
+        ctx.fillStyle = "rgba(125, 249, 255, 0.9)";
+        ctx.strokeStyle = "#f4fbff";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(0, -s.r - 4);
+        ctx.lineTo(s.r + 5, 0);
+        ctx.lineTo(0, s.r + 4);
+        ctx.lineTo(-s.r - 5, 0);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = "#2357ff";
+        ctx.beginPath();
+        ctx.arc(0, 0, 4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+      ctx.shadowBlur = 0;
+    }
+
+    function drawEnemies() {
+      for (const e of enemies) {
+        ctx.save();
+        ctx.translate(e.x, e.y);
+        ctx.rotate(e.spin);
+        if (e.type === "finalBoss") {
+          ctx.shadowColor = "#ffcc33";
+          ctx.shadowBlur = 24;
+          ctx.fillStyle = "#30162f";
+          ctx.strokeStyle = "#ffcc33";
+          ctx.lineWidth = 4;
+          ctx.beginPath();
+          ctx.moveTo(0, -e.r);
+          ctx.lineTo(e.r * 0.78, -e.r * 0.46);
+          ctx.lineTo(e.r * 0.96, e.r * 0.18);
+          ctx.lineTo(e.r * 0.48, e.r * 0.74);
+          ctx.lineTo(0, e.r * 0.52);
+          ctx.lineTo(-e.r * 0.48, e.r * 0.74);
+          ctx.lineTo(-e.r * 0.96, e.r * 0.18);
+          ctx.lineTo(-e.r * 0.78, -e.r * 0.46);
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+
+          ctx.strokeStyle = "#ff5c7a";
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.arc(0, 0, e.r * 0.48, 0, Math.PI * 2);
+          ctx.stroke();
+
+          ctx.fillStyle = "#ffcc33";
+          ctx.beginPath();
+          ctx.arc(0, -e.r * 0.08, 13, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = "#ff5c7a";
+          ctx.beginPath();
+          ctx.arc(-e.r * 0.34, -e.r * 0.18, 8, 0, Math.PI * 2);
+          ctx.arc(e.r * 0.34, -e.r * 0.18, 8, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.shadowBlur = 0;
+
+          ctx.rotate(-e.spin);
+          const barWidth = e.r * 1.85;
+          const health = Math.max(0, e.hp / e.maxHp);
+          ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
+          ctx.fillRect(-barWidth / 2, e.r + 13, barWidth, 9);
+          ctx.fillStyle = "#ffcc33";
+          ctx.fillRect(-barWidth / 2, e.r + 13, barWidth * health, 9);
+        } else if (e.type === "boss") {
+          ctx.shadowColor = "#ff5c7a";
+          ctx.shadowBlur = 18;
+          ctx.fillStyle = "#44204a";
+          ctx.strokeStyle = "#ff5c7a";
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.moveTo(0, -e.r);
+          ctx.lineTo(e.r * 0.95, -e.r * 0.18);
+          ctx.lineTo(e.r * 0.72, e.r * 0.78);
+          ctx.lineTo(0, e.r * 0.58);
+          ctx.lineTo(-e.r * 0.72, e.r * 0.78);
+          ctx.lineTo(-e.r * 0.95, -e.r * 0.18);
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+          ctx.shadowBlur = 0;
+
+          ctx.fillStyle = "#ff5c7a";
+          ctx.beginPath();
+          ctx.arc(-e.r * 0.32, -e.r * 0.12, 7, 0, Math.PI * 2);
+          ctx.arc(e.r * 0.32, -e.r * 0.12, 7, 0, Math.PI * 2);
+          ctx.fill();
+
+          ctx.rotate(-e.spin);
+          const barWidth = e.r * 1.55;
+          const health = Math.max(0, e.hp / e.maxHp);
+          ctx.fillStyle = "rgba(0, 0, 0, 0.45)";
+          ctx.fillRect(-barWidth / 2, e.r + 10, barWidth, 7);
+          ctx.fillStyle = "#ffe066";
+          ctx.fillRect(-barWidth / 2, e.r + 10, barWidth * health, 7);
+        } else if (e.type === "fighter") {
+          ctx.shadowColor = "#7df9ff";
+          ctx.shadowBlur = 13;
+          ctx.fillStyle = "#243a62";
+          ctx.strokeStyle = "#7df9ff";
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(0, e.r * 1.05);
+          ctx.lineTo(e.r * 0.9, -e.r * 0.25);
+          ctx.lineTo(e.r * 0.34, -e.r * 0.12);
+          ctx.lineTo(e.r * 0.2, -e.r * 0.95);
+          ctx.lineTo(0, -e.r * 0.5);
+          ctx.lineTo(-e.r * 0.2, -e.r * 0.95);
+          ctx.lineTo(-e.r * 0.34, -e.r * 0.12);
+          ctx.lineTo(-e.r * 0.9, -e.r * 0.25);
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+          ctx.fillStyle = "#ff5c7a";
+          ctx.beginPath();
+          ctx.arc(-e.r * 0.36, e.r * 0.22, 3.5, 0, Math.PI * 2);
+          ctx.arc(e.r * 0.36, e.r * 0.22, 3.5, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = "#b6fbff";
+          ctx.beginPath();
+          ctx.ellipse(0, -e.r * 0.18, e.r * 0.22, e.r * 0.36, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.shadowBlur = 0;
+        } else if (e.type === "saucer") {
+          ctx.fillStyle = "#ff5c7a";
+          ctx.beginPath();
+          ctx.ellipse(0, 0, e.r * 1.28, e.r * 0.55, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = "#f4fbff";
+          ctx.beginPath();
+          ctx.arc(0, -4, e.r * 0.42, 0, Math.PI * 2);
+          ctx.fill();
+        } else {
+          ctx.fillStyle = "#a8795d";
+          ctx.strokeStyle = "#ffb86b";
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          for (let i = 0; i < 8; i++) {
+            const angle = (Math.PI * 2 * i) / 8;
+            const rockR = e.r * (0.72 + Math.sin(i * 2.1 + e.spin) * 0.16 + Math.random() * 0.09);
+            const x = Math.cos(angle) * rockR;
+            const y = Math.sin(angle) * rockR;
+            if (i === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+          }
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
+    }
+
+    function drawPowerups() {
+      for (const p of powerups) {
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate(performance.now() / 350);
+        ctx.fillStyle = powerupColor(p.kind);
+        ctx.shadowColor = ctx.fillStyle;
+        ctx.shadowBlur = 14;
+        if (p.kind === "heart") {
+          ctx.beginPath();
+          ctx.moveTo(0, p.r * 0.72);
+          ctx.bezierCurveTo(-p.r * 1.25, -p.r * 0.12, -p.r * 0.76, -p.r * 1.02, 0, -p.r * 0.44);
+          ctx.bezierCurveTo(p.r * 0.76, -p.r * 1.02, p.r * 1.25, -p.r * 0.12, 0, p.r * 0.72);
+          ctx.fill();
+        } else {
+          ctx.beginPath();
+          for (let i = 0; i < 5; i++) {
+            const a = -Math.PI / 2 + (i * Math.PI * 2) / 5;
+            ctx.lineTo(Math.cos(a) * p.r, Math.sin(a) * p.r);
+            ctx.lineTo(Math.cos(a + Math.PI / 5) * (p.r * 0.45), Math.sin(a + Math.PI / 5) * (p.r * 0.45));
+          }
+          ctx.closePath();
+          ctx.fill();
+        }
+        ctx.restore();
+      }
+      ctx.shadowBlur = 0;
+    }
+
+    function powerupColor(kind) {
+      if (kind === "rapid") return "#ffe066";
+      if (kind === "shield") return "#65ffa8";
+      if (kind === "heavy") return "#ff7a3d";
+      if (kind === "heart") return "#ff7aa8";
+      return "#d88cff";
+    }
+
+    function drawBursts() {
+      for (const burst of bursts) {
+        const t = Math.max(0, burst.life / burst.max);
+        ctx.save();
+        ctx.globalCompositeOperation = "lighter";
+        ctx.globalAlpha = t * (burst.flash || 0.35);
+        const flash = ctx.createRadialGradient(burst.x, burst.y, 0, burst.x, burst.y, (burst.core || 12) * 2.8);
+        flash.addColorStop(0, "rgba(255,255,255,0.95)");
+        flash.addColorStop(0.28, burst.color);
+        flash.addColorStop(1, "rgba(255,255,255,0)");
+        ctx.fillStyle = flash;
+        ctx.beginPath();
+        ctx.arc(burst.x, burst.y, (burst.core || 12) * (1.2 + (1 - t) * 1.8), 0, Math.PI * 2);
+        ctx.fill();
+
+        if (burst.sparks) {
+          ctx.lineCap = "round";
+          for (const spark of burst.sparks) {
+            const st = Math.max(0, spark.life / 0.5);
+            const angle = Math.atan2(spark.vy, spark.vx);
+            ctx.globalAlpha = st * 0.9;
+            ctx.strokeStyle = spark.life > 0.22 ? "#fff7c7" : burst.color;
+            ctx.lineWidth = 1.2 + st * 2.2;
+            ctx.beginPath();
+            ctx.moveTo(spark.x, spark.y);
+            ctx.lineTo(spark.x - Math.cos(angle) * spark.length, spark.y - Math.sin(angle) * spark.length);
+            ctx.stroke();
+          }
+        }
+
+        ctx.globalAlpha = t;
+        ctx.strokeStyle = burst.color;
+        ctx.lineWidth = 2.5 + t * 2;
+        ctx.beginPath();
+        ctx.arc(burst.x, burst.y, burst.r, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.globalAlpha = t * 0.55;
+        ctx.strokeStyle = "#ffffff";
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.arc(burst.x, burst.y, burst.r * 0.58, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+      }
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = "source-over";
+    }
+
+    function distance(a, b) {
+      return Math.hypot(a.x - b.x, a.y - b.y);
+    }
+
+    function clamp(value, min, max) {
+      return Math.min(max, Math.max(min, value));
+    }
+
+    function primaryAction() {
+      if (awaitingNextMinute) continueNextMinute();
+      else startGame();
+    }
+
+    window.addEventListener("resize", resize);
+    window.addEventListener("keydown", event => {
+      if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", " "].includes(event.key)) event.preventDefault();
+      keys.add(event.key);
+      if (!playing && (event.key === "Enter" || event.key === " ")) primaryAction();
+    });
+    window.addEventListener("keyup", event => keys.delete(event.key));
+
+    stage.addEventListener("pointerdown", event => {
+      if (event.target.closest(".overlay")) return;
+      stage.setPointerCapture(event.pointerId);
+      touching = true;
+      if (!playing && !event.target.closest("button")) primaryAction();
+      moveTouch(event);
+      shoot();
+    });
+    stage.addEventListener("pointermove", moveTouch);
+    stage.addEventListener("pointerup", event => {
+      touching = false;
+      if (stage.hasPointerCapture(event.pointerId)) stage.releasePointerCapture(event.pointerId);
+    });
+    stage.addEventListener("pointercancel", () => {
+      touching = false;
+    });
+    restart.addEventListener("click", primaryAction);
+    hangar.addEventListener("click", handleHangarClick);
+    overlay.addEventListener("pointerdown", event => event.stopPropagation());
+    overlay.addEventListener("touchmove", event => event.stopPropagation(), { passive: true });
+
+    function moveTouch(event) {
+      if (!playing) return;
+      const rect = stage.getBoundingClientRect();
+      player.x = clamp(event.clientX - rect.left, 24, width - 24);
+      player.y = clamp(event.clientY - rect.top, 110, height - 40);
+      if (touching) shoot();
+    }
+
+    resize();
+    renderHangar();
+    updateHud();
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>

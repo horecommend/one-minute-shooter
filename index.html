@@ -526,7 +526,7 @@
         ownedAircrafts.push(aircraft.id);
         if (!hasInfiniteDurability(aircraft)) aircraftUses[aircraft.id] = aircraft.durability;
         saveHangar();
-        playSound("power");
+        playSound("buy");
       }
       if (isAircraftBroken(aircraft)) {
         const cost = repairCost(aircraft);
@@ -540,7 +540,7 @@
         saveHangar();
         renderHangar();
         summary.textContent = `${aircraft.name} 已修复，可以再出战 ${aircraft.durability} 局。`;
-        playSound("power");
+        playSound("buy");
         return;
       }
       selectedAircraftId = aircraft.id;
@@ -1481,6 +1481,7 @@
       if (kind === "boom") return noiseBurst(0.16, 0.13, 520);
       if (kind === "bigBoom") return noiseBurst(0.28, 0.22, 180);
       if (kind === "power") return arpeggio([620, 830, 1120], 0.045, 0.055);
+      if (kind === "buy") return arpeggio([420, 680, 960, 1280], 0.05, 0.075);
       if (kind === "heart") return arpeggio([520, 780, 1040, 1320], 0.055, 0.06);
       if (kind === "shield") return chirp(260, 900, 0.18, 0.05, "sine");
       if (kind === "hurt") return chirp(150, 62, 0.22, 0.12, "sawtooth");
@@ -1573,7 +1574,7 @@
       if (kind === "hurt" || kind === "lose") return { freq: 120, duration: 0.22, volume: 0.24, wave: "saw" };
       if (kind === "boss" || kind === "finalBoss") return { freq: 140, duration: 0.28, volume: 0.26, wave: "saw" };
       if (kind === "warning") return { freq: 740, duration: 0.22, volume: 0.22, wave: "square" };
-      if (kind === "heart" || kind === "power" || kind === "split" || kind === "start" || kind === "win" || kind === "shield") return { freq: 760, duration: 0.16, volume: 0.2, wave: "triangle" };
+      if (kind === "heart" || kind === "power" || kind === "buy" || kind === "split" || kind === "start" || kind === "win" || kind === "shield") return { freq: 760, duration: 0.16, volume: 0.2, wave: "triangle" };
       return { freq: 440, duration: 0.08, volume: 0.16, wave: "triangle" };
     }
 

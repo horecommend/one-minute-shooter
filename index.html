@@ -245,6 +245,22 @@
       font-weight: 700;
     }
 
+    .hangar-notice {
+      display: none;
+      padding: 9px 10px;
+      border: 1px solid rgba(255, 224, 102, 0.45);
+      border-radius: 8px;
+      color: #ffe066;
+      background: rgba(255, 224, 102, 0.1);
+      font-size: 13px;
+      font-weight: 800;
+      text-align: center;
+    }
+
+    .hangar-notice.show {
+      display: block;
+    }
+
     .plane-card {
       display: grid;
       grid-template-columns: 1fr auto;
@@ -586,6 +602,7 @@
           <span>机库</span>
           <span>战斗积分：${battlePoints}</span>
         </div>
+        <div class="hangar-notice" id="hangarNotice"></div>
         ${aircrafts.map(aircraft => {
           const owned = ownedAircrafts.includes(aircraft.id);
           const selected = aircraft.id === selectedAircraftId;
@@ -605,6 +622,13 @@
       `;
     }
 
+    function showHangarNotice(message) {
+      const notice = document.getElementById("hangarNotice");
+      if (!notice) return;
+      notice.textContent = message;
+      notice.classList.add("show");
+    }
+
     function handleHangarClick(event) {
       const button = event.target.closest("[data-aircraft]");
       if (!button) return;
@@ -612,7 +636,9 @@
       if (!aircraft) return;
       if (!ownedAircrafts.includes(aircraft.id)) {
         if (battlePoints < aircraft.cost) {
-          summary.textContent = `战斗积分不够，还差 ${aircraft.cost - battlePoints}。继续挑战就能攒积分。`;
+          const shortage = aircraft.cost - battlePoints;
+          summary.textContent = `${aircraft.name} 还差 ${shortage} 战斗积分。`;
+          showHangarNotice(`买不起 ${aircraft.name}，还差 ${shortage} 战斗积分`);
           playSound("hurt");
           return;
         }
@@ -625,7 +651,9 @@
       if (isAircraftBroken(aircraft)) {
         const cost = repairCost(aircraft);
         if (battlePoints < cost) {
-          summary.textContent = `修复积分不够，还差 ${cost - battlePoints}。先用歼15继续攒积分。`;
+          const shortage = cost - battlePoints;
+          summary.textContent = `${aircraft.name} 修复还差 ${shortage} 战斗积分。`;
+          showHangarNotice(`修复 ${aircraft.name} 还差 ${shortage} 战斗积分`);
           playSound("hurt");
           return;
         }

@@ -145,6 +145,44 @@
       line-height: 1.65;
     }
 
+    .total-page {
+      display: none;
+      margin: 16px 0;
+      text-align: left;
+    }
+
+    .total-page.show {
+      display: block;
+    }
+
+    .total-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .total-item {
+      padding: 10px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.06);
+    }
+
+    .total-label {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .total-value {
+      display: block;
+      margin-top: 4px;
+      color: #f4fbff;
+      font-size: 20px;
+      font-weight: 900;
+      font-variant-numeric: tabular-nums;
+    }
+
     button {
       width: 100%;
       min-height: 46px;
@@ -287,6 +325,7 @@
         <div class="message">
           <h1 id="headline">一分钟挑战赛</h1>
           <p id="summary">每分钟达成目标分就通关，通关后继续下一分钟。</p>
+          <div class="total-page" id="totalPage" aria-label="总计页面"></div>
           <button id="restart" type="button">开始挑战</button>
           <div class="hangar" id="hangar" aria-label="飞机选择"></div>
         </div>
@@ -304,6 +343,7 @@
     const overlay = document.getElementById("overlay");
     const headline = document.getElementById("headline");
     const summary = document.getElementById("summary");
+    const totalPage = document.getElementById("totalPage");
     const restart = document.getElementById("restart");
     const hangar = document.getElementById("hangar");
     const AudioContextClass = window.AudioContext || window.webkitAudioContext;
@@ -428,6 +468,8 @@
       }
       consumeAircraftUse(aircraft);
       playSound("start");
+      totalPage.classList.remove("show");
+      totalPage.innerHTML = "";
       totalScore = 0;
       challengeMinute = 1;
       lives = aircraft.maxLives;
@@ -691,7 +733,8 @@
       totalScore += score;
       const earned = awardBattlePoints(Math.max(5, Math.floor(score / 40)));
       headline.textContent = `第 ${challengeMinute} 分钟通关`;
-      summary.innerHTML = `本分钟 ${score} 分，奖励 1 条生命，继续下一分钟！<br><strong>总计</strong><br>第 ${challengeMinute} 分钟 · 总分 ${totalScore} · 获得 ${earned} 战斗积分`;
+      summary.textContent = "本分钟通关，奖励 1 条生命，继续下一分钟！";
+      showTotalPage({ result: "通关", minute: challengeMinute, minuteScore: score, target: minuteTarget, total: totalScore, earned });
       restart.textContent = "下一分钟";
       overlay.classList.add("show");
       renderHangar();
@@ -705,12 +748,45 @@
       const earned = awardBattlePoints(Math.floor(score / 70));
       const finalScore = totalScore + score;
       headline.textContent = title;
-      summary.innerHTML = `本分钟 ${score}/${minuteTarget}。再来一局冲更远。<br><strong>总计</strong><br>坚持到第 ${challengeMinute} 分钟 · 总分 ${finalScore} · 获得 ${earned} 战斗积分`;
+      summary.textContent = "本局结束，再来一局冲更远。";
+      showTotalPage({ result: title, minute: challengeMinute, minuteScore: score, target: minuteTarget, total: finalScore, earned });
       restart.textContent = "再玩一次";
       overlay.classList.add("show");
       renderHangar();
       playSound(title === "挑战成功" ? "win" : "lose");
       updateHud();
+    }
+
+    function showTotalPage(stats) {
+      totalPage.innerHTML = `
+        <div class="total-grid">
+          <div class="total-item">
+            <span class="total-label">结果</span>
+            <span class="total-value">${stats.result}</span>
+          </div>
+          <div class="total-item">
+            <span class="total-label">到达</span>
+            <span class="total-value">第 ${stats.minute} 分钟</span>
+          </div>
+          <div class="total-item">
+            <span class="total-label">本分钟</span>
+            <span class="total-value">${stats.minuteScore}/${stats.target}</span>
+          </div>
+          <div class="total-item">
+            <span class="total-label">总分</span>
+            <span class="total-value">${stats.total}</span>
+          </div>
+          <div class="total-item">
+            <span class="total-label">获得积分</span>
+            <span class="total-value">${stats.earned}</span>
+          </div>
+          <div class="total-item">
+            <span class="total-label">当前积分</span>
+            <span class="total-value">${battlePoints}</span>
+          </div>
+        </div>
+      `;
+      totalPage.classList.add("show");
     }
 
     function destroyPlayer() {

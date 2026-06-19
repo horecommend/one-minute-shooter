@@ -328,6 +328,7 @@
       { id: "awacs", name: "雷达预警机", cost: 1800, maxLives: 5, attack: 0.85, speed: 315, durability: 5, desc: "提前预判流星" },
       { id: "phantom", name: "幽灵战机", cost: 2000, maxLives: 4, attack: 1.6, speed: 390, durability: 4, desc: "高攻高速，容错较低" },
       { id: "ufo", name: "星环飞碟", cost: 2400, maxLives: 7, attack: 1.2, speed: 350, durability: 5, desc: "自动八方向散射" },
+      { id: "helicopter", name: "疾影直升机", cost: 2600, maxLives: 2, attack: 1.15, speed: 470, durability: 2, desc: "高速三连弹，攻速快" },
       { id: "rocket", name: "烈焰火箭", cost: 4200, maxLives: 3, attack: 1.9, speed: 455, durability: 3, desc: "导弹和返航小飞机" }
     ];
 
@@ -811,10 +812,17 @@
         launchRocketDrones();
         rocketDroneCooldown = rapidFire > 0 ? 6.2 : 8.4;
       }
-      const delay = rapidFire > 0 ? 0.11 : 0.22;
+      const helicopter = getSelectedAircraft().id === "helicopter";
+      const delay = helicopter ? (rapidFire > 0 ? 0.075 : 0.14) : rapidFire > 0 ? 0.11 : 0.22;
       if (shotCooldown > 0) return;
       shotCooldown = delay;
-      bullets.push(makeBullet(player.x, player.y - 22, 0, -520, 0));
+      if (helicopter) {
+        bullets.push(makeBullet(player.x, player.y - 24, 0, -560, 0));
+        bullets.push(makeBullet(player.x - 12, player.y - 17, -62, -540, 0, true));
+        bullets.push(makeBullet(player.x + 12, player.y - 17, 62, -540, 0, true));
+      } else {
+        bullets.push(makeBullet(player.x, player.y - 22, 0, -520, 0));
+      }
       if (rapidFire > 0) {
         bullets.push(makeBullet(player.x - 12, player.y - 16, -50, -500, 0, true));
         bullets.push(makeBullet(player.x + 12, player.y - 16, 50, -500, 0, true));
@@ -1743,6 +1751,7 @@
         phantom: ["#f2e9ff", "#d88cff", "#321b55"],
         awacs: ["#eafff5", "#65ffa8", "#1e4d5b"],
         ufo: ["#eafff5", "#65ffa8", "#24595d"],
+        helicopter: ["#e8ffff", "#ffe066", "#25506f"],
         rocket: ["#fff5d8", "#ff5c7a", "#72223a"]
       };
       const colors = paintJobs[aircraft.id] || ["#f6fbff", "#9fb3c4", "#4d6577"];
@@ -1794,6 +1803,12 @@
           tails: [[-24, 14], [-38, 26], [-10, 20], [24, 14], [38, 26], [10, 20]],
           cockpit: [0, -10, 12, 8],
           core: [-13, 1, 26, 11]
+        },
+        helicopter: {
+          body: [[0, -31], [10, -19], [13, 10], [7, 28], [0, 34], [-7, 28], [-13, 10], [-10, -19]],
+          tails: [[-8, 20], [-29, 32], [-5, 30], [8, 20], [29, 32], [5, 30]],
+          cockpit: [0, -13, 6, 10],
+          core: [-5, -2, 10, 25]
         },
         rocket: {
           body: [[0, -44], [10, -25], [12, 7], [25, 24], [10, 21], [5, 38], [0, 30], [-5, 38], [-10, 21], [-25, 24], [-12, 7], [-10, -25]],
@@ -1859,6 +1874,28 @@
         ctx.beginPath();
         ctx.ellipse(0, -24, 18, 5.5, Math.sin(performance.now() / 260) * 0.6, 0, Math.PI * 2);
         ctx.fill();
+        ctx.stroke();
+      }
+
+      if (aircraft.id === "helicopter") {
+        ctx.save();
+        ctx.rotate(performance.now() / 80);
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.9)";
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(-31, -24);
+        ctx.lineTo(31, -24);
+        ctx.moveTo(0, -55);
+        ctx.lineTo(0, 7);
+        ctx.stroke();
+        ctx.restore();
+        ctx.strokeStyle = "#ffe066";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(-24, 31);
+        ctx.lineTo(-39, 39);
+        ctx.moveTo(24, 31);
+        ctx.lineTo(39, 39);
         ctx.stroke();
       }
 

@@ -348,7 +348,6 @@
     let finalBossSpawned = false;
     let meteorTimer = 6;
     let meteorStormTimer = 22;
-    let meteorFlash = 0;
     let shotCooldown = 0;
     let powerTimer = 9;
     let powerupsSpawned = 0;
@@ -441,7 +440,6 @@
       finalBossSpawned = false;
       meteorTimer = new URLSearchParams(location.search).has("testMeteor") ? 1 : 5;
       meteorStormTimer = new URLSearchParams(location.search).has("testMeteor") ? 7 : 22;
-      meteorFlash = 0;
       shotCooldown = 0;
       ufoBurstCooldown = 1.1;
       rocketMissileCooldown = 0.8;
@@ -727,7 +725,6 @@
       bossTimer -= dt;
       meteorTimer -= dt;
       meteorStormTimer -= dt;
-      meteorFlash = Math.max(0, meteorFlash - dt);
       powerTimer -= dt;
       splitterTimer -= dt;
 
@@ -1017,7 +1014,6 @@
         spawnMeteor(kinds[Math.floor(Math.random() * kinds.length)], true);
       }
       meteorStormTimer = 18 + Math.random() * 10;
-      meteorFlash = 0.55;
       meteorTimer = Math.max(meteorTimer, 4);
       playSound("meteor");
     }
@@ -1652,7 +1648,6 @@
       drawFriendlyDrones();
       drawPlayer();
       drawBursts();
-      drawMeteorFlash();
     }
 
     function drawSpace() {
@@ -2228,25 +2223,6 @@
       }
       ctx.globalAlpha = 1;
       ctx.globalCompositeOperation = "source-over";
-    }
-
-    function drawMeteorFlash() {
-      if (meteorFlash <= 0 || !playing) return;
-      const alpha = Math.min(1, meteorFlash / 0.55);
-      ctx.save();
-      ctx.globalCompositeOperation = "lighter";
-      ctx.globalAlpha = alpha * 0.32;
-      ctx.fillStyle = "#ffe066";
-      ctx.fillRect(0, 0, width, height);
-      ctx.globalAlpha = alpha * 0.46;
-      const edge = ctx.createLinearGradient(0, 0, width, height);
-      edge.addColorStop(0, "rgba(255, 92, 122, 0.9)");
-      edge.addColorStop(0.5, "rgba(255, 159, 69, 0.08)");
-      edge.addColorStop(1, "rgba(255, 92, 122, 0.9)");
-      ctx.strokeStyle = edge;
-      ctx.lineWidth = 14 + alpha * 16;
-      ctx.strokeRect(7, 7, width - 14, height - 14);
-      ctx.restore();
     }
 
     function distance(a, b) {
